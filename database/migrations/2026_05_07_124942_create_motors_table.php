@@ -19,8 +19,9 @@ return new class extends Migration
             $table->string('model');
             $table->string('plate_nomor')->unique();
             $table->integer('harga_per_hari');
-            $table->enum('status', ['tersedia', 'booking', 'dipesan'])->default('tersedia');
+            $table->enum('status', ['tersedia','selesai', 'booking', 'dipesan'])->default('tersedia');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

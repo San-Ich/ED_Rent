@@ -19,21 +19,21 @@ class MotorFactory extends Factory
     public function definition(): array
     {
         $motors = [
-            ['brand' => 'Honda', 'model' => 'Vario 160', 'category' => 'Matic'],
-            ['brand' => 'Honda', 'model' => 'Beat', 'category' => 'Matic'],
-            ['brand' => 'Honda', 'model' => 'Scoopy', 'category' => 'Matic'],
-            ['brand' => 'Honda', 'model' => 'PCX', 'category' => 'Matic'],
-            ['brand' => 'Honda', 'model' => 'CRF150L', 'category' => 'Trail'],
-            ['brand' => 'Honda', 'model' => 'CB150R', 'category' => 'Naked'],
-            ['brand' => 'Honda', 'model' => 'CBR150', 'category' => 'Fairing'],
-            ['brand' => 'Yamaha', 'model' => 'NMAX', 'category' => 'Matic'],
-            ['brand' => 'Yamaha', 'model' => 'Aerox', 'category' => 'Matic'],
-            ['brand' => 'Yamaha', 'model' => 'Fazzio', 'category' => 'Matic'],
-            ['brand' => 'Yamaha', 'model' => 'R15', 'category' => 'Fairing'],
-            ['brand' => 'Kawasaki', 'model' => 'Ninja 250', 'category' => 'Fairing'],
-            ['brand' => 'Kawasaki', 'model' => 'Ninja KLX', 'category' => 'Trail'],
-            ['brand' => 'Suzuki', 'model' => 'Satria F150', 'category' => 'Bebek'],
-            ['brand' => 'Suzuki', 'model' => 'Nex', 'category' => 'Matic'],
+            ['brand' => 'Honda', 'model' => 'Vario 160', 'category' => 'Matic', 'harga' => 125000],
+            ['brand' => 'Honda', 'model' => 'Beat', 'category' => 'Matic', 'harga' => 100000],
+            ['brand' => 'Honda', 'model' => 'Scoopy', 'category' => 'Matic', 'harga' => 110000],
+            ['brand' => 'Honda', 'model' => 'PCX', 'category' => 'Matic', 'harga' => 130000],
+            ['brand' => 'Honda', 'model' => 'CRF150L', 'category' => 'Trail', 'harga' => 150000],
+            ['brand' => 'Honda', 'model' => 'CB150R', 'category' => 'Naked', 'harga' => 150000],
+            ['brand' => 'Honda', 'model' => 'CBR150', 'category' => 'Fairing', 'harga' => 180000],
+            ['brand' => 'Yamaha', 'model' => 'NMAX', 'category' => 'Matic', 'harga' => 140000],
+            ['brand' => 'Yamaha', 'model' => 'Aerox', 'category' => 'Matic', 'harga' => 160000],
+            ['brand' => 'Yamaha', 'model' => 'Fazzio', 'category' => 'Matic', 'harga' => 120000],
+            ['brand' => 'Yamaha', 'model' => 'R15', 'category' => 'Fairing', 'harga' => 200000],
+            ['brand' => 'Kawasaki', 'model' => 'Ninja 250', 'category' => 'Fairing', 'harga' => 300000],
+            ['brand' => 'Kawasaki', 'model' => 'KLX', 'category' => 'Trail', 'harga' => 220000],
+            ['brand' => 'Suzuki', 'model' => 'Satria F150', 'category' => 'Bebek', 'harga' => 110000],
+            ['brand' => 'Suzuki', 'model' => 'Nex', 'category' => 'Matic', 'harga' => 110000],
         ];
 
         $units = $this->faker->randomElement($motors);
@@ -46,8 +46,8 @@ class MotorFactory extends Factory
             'brand' => $units['brand'],
             'model' => $units['model'],
             'plate_nomor' => fake()->randomElement(['B', 'D', 'AB', 'DK', 'L', 'K', 'AB']) . ' ' . fake()->numberBetween(1000, 9999) . ' ' . strToUpper(fake()->bothify('??')),
-            'harga_per_hari' => $this->faker->numberBetween(100000, 1000000),
-            'status' => $this->faker->randomElement(['tersedia', 'booking', 'dipesan']),
+            'harga_per_hari' => $units['harga'],
+            'status' => $this->faker->randomElement(['tersedia', 'dipesan']),
         ];
     }
 }

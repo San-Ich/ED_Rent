@@ -5,11 +5,13 @@ namespace App\Models;
 use App\Models\Rental;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Motor extends Model
 {
-    protected $fillable = ['category_id', 'image', 'brand', 'model'];
+    protected $fillable = ['category_id', 'image', 'brand', 'model', 'plate_nomor', 'harga_per_hari', 'status'];
     use HasFactory;
+    use SoftDeletes;
     
     public function category()
     {
