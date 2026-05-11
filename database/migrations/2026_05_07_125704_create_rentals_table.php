@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('tanggal_pengembalian')->nullable();
             $table->integer('total_harga')->default(0);
             $table->integer('penalty')->default(0);
-            $table->enum('status', ['pending', 'dipesan', 'selesai', 'dibatalkan'])->default('pending');
+            $table->enum('status', ['dipesan','tersedia', 'selesai', 'dibatalkan'])->default('tersedia');
             $table->timestamps();
         });
     }

@@ -19,20 +19,22 @@ class RentalObserver
 
     public function updated(Rental $rental): void
     {
-        if ($rental->wasChanged('status')) {
+        if ($rental->isDirty('status')) {
+            $motor = $rental->motor;
 
-            // JIKA STATUS JADI SELESAI ATAU DIBATALKAN -> MOTOR JADI TERSEDIA
-            if (in_array($rental->status, ['selesai', 'dibatalkan'])) {
-                $rental->motor->update([
-                    'status' => 'tersedia'
-                ]);
-            }
+            switch ($rental->status) {
 
-            // JIKA STATUS JADI DIPESAN -> MOTOR JADI DIPESAN
-            if ($rental->status === 'dipesan') {
-                $rental->motor->update([
-                    'status' => 'dipesan'
-                ]);
+                case 'selesai':
+                    $motor->update(['status' => 'tersedia']);
+                    break;
+
+                case 'dibatalkan':
+                    $motor->update(['status' => 'tersedia']);
+                    break;
+
+                case 'dipesan':
+                    $motor->update(['status' => 'dipesan']);
+                    break;
             }
         }
     }

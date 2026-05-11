@@ -23,6 +23,13 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'phone',
+        'address',
+        'rental_limit',
+        'ktp_path',
+        'sim_path',
+        'is_verified',
     ];
 
     /**
