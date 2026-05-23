@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Rentals\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -36,7 +37,26 @@ class RentalsTable
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('status')
-                    ->badge(),
+                    ->badge()
+                    ->color(
+                        fn(string $state): string => match ($state) {
+                            'selesai' => 'success',
+                            'dipesan' => 'warning',
+                            'dibatalkan' => 'danger',
+                            default => 'info',
+                        }
+                    )
+                    ->icon(fn(string $state): string => match ($state) {
+                        'selesai' => 'heroicon-m-check-circle',
+                        'dipesan' => 'heroicon-m-clock',
+                        'dibatalkan' => 'heroicon-m-x-circle',
+                        default => 'heroicon-m-question-mark-circle',
+                    })
+                    ->sortable(),
+                ImageColumn::make('payment_proof')
+                    ->label('Bukti')
+                    ->circular()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

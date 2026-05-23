@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\Motors\Tables;
 
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -21,7 +23,10 @@ class MotorsTable
                 TextColumn::make('category_id')
                     ->numeric()
                     ->sortable(),
-                ImageColumn::make('image'),
+                ImageColumn::make('image')
+                    ->disk('public')
+                    ->width(100)
+                    ->height(100),
                 TextColumn::make('brand')
                     ->searchable(),
                 TextColumn::make('model')
@@ -37,12 +42,14 @@ class MotorsTable
                     ->color(
                         fn(string $state): string => match ($state) {
                             'tersedia' => 'success',
-                            'dipesan' => 'danger',
+                            'perawatan' => 'danger',
+                            'dipesan' => 'warning',
                             default => 'info',
                         }
                     )
                     ->icon(fn(string $state): string => match ($state) {
                         'tersedia' => 'heroicon-m-check-circle',
+                        'perawatan' => 'heroicon-m-wrench',
                         'dipesan' => 'heroicon-m-no-symbol',
                         default => 'heroicon-m-question-mark-circle',
                     })
@@ -65,6 +72,8 @@ class MotorsTable
             ])
             ->recordActions([
                 EditAction::make(),
+                DeleteAction::make(),
+                RestoreAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

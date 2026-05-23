@@ -28,10 +28,14 @@ class ListMotors extends ListRecords
                 ->modifyQueryUsing(fn(Builder $query) => $query->where('status', 'tersedia'))
                 ->badge(Motor::where('status', 'tersedia')->count())
                 ->badgeColor('success'),
-            'Dipesan' => Tab::make('Sedang Dipesan')
-                ->modifyQueryUsing(fn(Builder $query) => $query->where('status', 'Dipesan'))
-                ->badge(Motor::where('status', 'Dipesan')->count())
+            'dipesan' => Tab::make('Sedang Dipesan')
+                ->modifyQueryUsing(fn(Builder $query) => $query->where('status', 'dipesan'))
+                ->badge(Motor::where('status', 'dipesan')->count())
                 ->badgeColor('warning'),
+            'perawatan' => Tab::make('Perawatan')
+                ->modifyQueryUsing(fn(Builder $query) => $query->where('status', 'perawatan'))
+                ->badge(Motor::where('status', 'perawatan')->count())
+                ->badgeColor('danger'),
         ];
     }
 }

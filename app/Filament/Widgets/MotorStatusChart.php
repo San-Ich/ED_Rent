@@ -15,7 +15,6 @@ class MotorStatusChart extends ChartWidget
 
     protected function getData(): array
     {
-        // Menghitung jumlah motor per status
         $data = Motor::select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->get();
@@ -26,9 +25,9 @@ class MotorStatusChart extends ChartWidget
                     'label' => 'Jumlah Motor',
                     'data' => $data->pluck('total'),
                     'backgroundColor' => [
-                        '#4ade80', // Hijau untuk tersedia
+                        '#32CD32', // Hijau untuk tersedia
                         '#fbbf24', // Kuning untuk dipesan
-                        '#f87171', // Merah untuk dibatalkan/rusak jika ada
+                        '#FF0000', // Merah untuk perawatan
                     ],
                 ],
             ],

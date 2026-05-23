@@ -2,19 +2,19 @@
 
 namespace App\Filament\Resources\Rentals\Schemas;
 
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\DatePicker;
 use App\Models\Motor;
 use Carbon\Carbon;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 
 class RentalForm
 {
     public static function configure($schema)
     {
-        // Kita gunakan ->columns(3) langsung pada schema utama
-        // Ini akan membagi form menjadi 3 kolom tanpa butuh class Grid
+    
         return $schema
             ->columns(3)
             ->components([
@@ -23,7 +23,7 @@ class RentalForm
                     ->relationship('user', 'name')
                     ->searchable()
                     ->required()
-                    ->columnSpan(2), // Mengambil 2 kolom di kiri
+                    ->columnSpan(2), 
 
                 TextInput::make('total_harga')
                     ->label('Total Bayar')
@@ -31,7 +31,7 @@ class RentalForm
                     ->prefix('Rp')
                     ->readOnly()
                     ->dehydrated()
-                    ->columnSpan(1), // 1 kolom di kanan
+                    ->columnSpan(1), 
 
                 Select::make('motor_id')
                     ->relationship(
@@ -42,7 +42,9 @@ class RentalForm
                     )
                     ->required()
                     ->live()
+                    ->searchable()
                     ->preload()
+                    ->getOptionLabelFromRecordUsing(fn($record) => "{$record->brand} - {$record->model} ({$record->plate_nomor})")
                     ->afterStateUpdated(fn($set, $get) => self::calculateTotal($set, $get))
                     ->columnSpan(2),
 
@@ -81,7 +83,16 @@ class RentalForm
                     ->label('Tanggal Motor Kembali (Aktual)')
                     ->live()
                     ->afterStateUpdated(fn($set, $get) => self::calculateTotal($set, $get))
-                    ->columnSpan(3), // Baris baru penuh di bawah
+                    ->columnSpan(3),
+
+                FileUpload::make('payment_proof')
+                    ->label('Bukti Pembayaran')
+                    ->image() 
+                    ->directory('payment-proofs')
+                    ->visibility('public')
+                    ->openable()
+                    ->downloadable()
+                    ->helperText('Unggah struk transfer bank atau bukti bayar lainnya.'),
             ]);
     }
 

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Category;
 use App\Models\Motor;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Motor>
@@ -42,12 +43,13 @@ class MotorFactory extends Factory
 
         return [
             'category_id' => $category->id,
-            'image' => 'motor-' . fake()->numberBetween(1, 15) . '.jpg',
+            'slug' => Str::slug($units['brand'] . '-' . $units['model'] . '-' . Str::random(5)),
+            'image' => 'motors/motor-' . fake()->numberBetween(1, 7) . '.webp',
             'brand' => $units['brand'],
             'model' => $units['model'],
             'plate_nomor' => fake()->randomElement(['B', 'D', 'AB', 'DK', 'L', 'K', 'AB']) . ' ' . fake()->numberBetween(1000, 9999) . ' ' . strToUpper(fake()->bothify('??')),
             'harga_per_hari' => $units['harga'],
-            'status' => $this->faker->randomElement(['tersedia', 'dipesan']),
+            'status' => ('tersedia'),
         ];
     }
 }

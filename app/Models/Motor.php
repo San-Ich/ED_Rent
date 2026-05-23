@@ -6,6 +6,7 @@ use App\Models\Rental;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Motor extends Model
 {
@@ -21,5 +22,12 @@ class Motor extends Model
     public function rentals()
     {
         return $this->hasMany(Rental::class);
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($motor) {
+            $motor->slug = Str::slug($motor->model . '-' . Str::random(5));
+        });
     }
 }

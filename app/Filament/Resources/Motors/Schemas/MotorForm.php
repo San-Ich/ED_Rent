@@ -41,7 +41,7 @@ class MotorForm
                     Select::make('status')
                         ->options([
                             'tersedia' => 'Tersedia',
-                            'booking' => 'Booking',
+                            'perawatan' => 'perawatan',
                             'dipesan' => 'Dipesan',
                         ])
                         ->default('tersedia')
