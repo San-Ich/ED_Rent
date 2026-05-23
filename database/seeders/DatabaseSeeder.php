@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\CategorySeeder;
+use Database\Seeders\MotorSeeder;
+use Database\Seeders\RentalSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -26,5 +29,6 @@ class DatabaseSeeder extends Seeder
         $this->call([CategorySeeder::class]);
         $this->call([MotorSeeder::class]);
         $this->call([RentalSeeder::class]);
+        $this->call([MotorSpecificationSeeder::class]);
     }
 }

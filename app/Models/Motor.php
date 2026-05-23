@@ -30,4 +30,9 @@ class Motor extends Model
             $motor->slug = Str::slug($motor->model . '-' . Str::random(5));
         });
     }
+
+    public function specification()
+    {
+        return $this->hasOne(MotorSpecification::class);
+    }
 }
