@@ -19,7 +19,7 @@ class MotorController extends Controller
             });
         }
 
-        if($request->filled('search')) {
+        if ($request->filled('search')) {
             $query->where('model', 'like', '%' . $request->search . '%');
         }
 
@@ -30,5 +30,13 @@ class MotorController extends Controller
         $motors = $query->paginate(8);
 
         return view('catalog-page', compact('motors'));
+    }
+
+    public function show($slug)
+    {
+        $motor = Motor::with(['specification', 'category'])->where('slug', $slug)->firstOrFail();
+
+        $rekomendasiMotors = Motor::where('status', 'Tersedia')->where('id', '!=', $motor->id)->inRandomOrder()->take(8)->get();
+        return view('detail-motor', compact('motor', 'rekomendasiMotors'));
     }
 }

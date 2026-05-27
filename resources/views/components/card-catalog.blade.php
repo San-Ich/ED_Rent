@@ -12,7 +12,7 @@
 
                     <div class="motor-img-container position-relative overflow-hidden"
                         style="height: 180px; width: 100%;">
-                        @if ( $motor->status === 'Tersedia')
+                        @if ($motor->status === 'Tersedia')
                             <span
                                 class="badge-status position-absolute top-3 inset-s-3 z-3 bg-success text-white px-2.5 py-1 rounded-pill small fw-bold tracking-wide shadow-sm"
                                 style="font-size: 0.75rem;">
@@ -45,10 +45,10 @@
 
                             <div class="d-flex gap-2 text-secondary mb-3 border-top border-bottom py-2"
                                 style="font-size: 0.75rem;">
-                                <span class="d-flex align-items-center"><i
+                                <span class="d-flex align-items-center text-truncate"><i
                                         class="bi bi-lightning-charge-fill text-carbon me-1"></i>
                                     {{ $motor->specification->kapasitas_mesin ?? 'Kapasitas Tidak Diketahui' }}
-                                    </span>
+                                </span>
                                 <span class="d-flex align-items-center text-truncate" style="max-width: 200px;"
                                     title="{{ $motor->specification->transmisi }}">
                                     <i class="bi bi-gear-fill text-carbon me-1"></i>
@@ -81,7 +81,8 @@
                                 </div>
                             </div>
 
-                            <a href="#" class="btn btn-carbon btn-sm w-100 py-2 rounded-pill fw-bold dynamic-btn"
+                            <a href="{{ route('catalog.show', $motor->slug) }}"
+                                class="btn btn-carbon btn-sm w-100 py-2 rounded-pill fw-bold dynamic-btn"
                                 style="font-size: 0.8rem;">
                                 <i class="bi bi-bag-plus-fill me-1"></i> Sewa
                             </a>
