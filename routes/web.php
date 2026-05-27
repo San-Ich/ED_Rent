@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
 
 Route::get('/catalog', [MotorController::class, 'index'])->name('catalog');
+Route::get('catalog/{slug}', [MotorController::class, 'show'])->name('catalog.show');
 
 Route::get('/booking', [RentalController::class, 'index'])->name('booking');
 
