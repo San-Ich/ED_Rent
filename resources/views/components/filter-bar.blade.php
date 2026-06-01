@@ -22,6 +22,11 @@
                 Selesai ({{ $counts['Selesai'] }})
             </a>
 
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'Gagal', 'page' => null]) }}"
+                class="filter-pill text-decoration-none {{ request('status') == 'Gagal' ? 'active' : '' }}">
+                Gagal ({{ $counts['Gagal'] }})
+            </a>
+
         </div>
     </div>
 </section>

@@ -26,8 +26,8 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link fw-semibold px-3 {{ request()->routeIs('booking') || request()->routeIs('booking.detail') ? 'text-carbon active-menu' : 'text-secondary' }}"
-                        href="{{ route('booking') }}">Daftar Pesanan</a>
+                    <a class="nav-link fw-semibold px-3 {{ request()->routeIs('customer.orders') || request()->routeIs('customer.orders.detail') ? 'text-carbon active-menu' : 'text-secondary' }}"
+                        href="{{ route('customer.orders') }}">Daftar Pesanan</a>
                 </li>
 
                 <li class="nav-item dropdown ms-lg-3 mt-2 mt-lg-0 w-100 w-lg-auto">

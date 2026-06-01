@@ -42,25 +42,25 @@ class RentalsTable
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->color(
-                        fn(string $state): string => match ($state) {
-                            'Selesai' => 'success',
-                            'Disewa' => 'warning',
-                            'Menunggu' => 'primary',
-                            default => 'info',
-                        }
-                    )
-                    ->icon(fn(string $state): string => match ($state) {
-                        'Selesai'    => 'heroicon-m-check-circle',
-                        'Disewa'     => 'heroicon-m-clock',
-                        'Menunggu'   => 'heroicon-m-x-circle',
-                        default      => 'heroicon-m-question-mark-circle',
-                    })
+                ->color(fn(string $state): string => match ($state) {
+                    'Selesai'  => 'success',
+                    'Disewa'   => 'info',
+                    'Menunggu' => 'warning',
+                    'Gagal'    => 'danger',
+                    'Pending Data' => 'danger',
+                    'Menunggu Verifikasi' => 'primary',
+                    default    => 'gray',
+                })
+                ->icon(fn(string $state): string => match ($state) {
+                    'Selesai'  => 'heroicon-m-check-badge', 
+                    'Disewa'   => 'heroicon-m-arrow-path', 
+                    'Menunggu' => 'heroicon-m-clock',
+                    'Gagal'    => 'heroicon-m-exclamation-circle',
+                    'Pending Denda' => 'heroicon-m-exclamation-triangle',
+                    'Menunggu Verifikasi' => 'heroicon-m-clipboard-document-check',
+                    default    => 'heroicon-m-question-mark-circle',
+                })
                     ->sortable(),
-                ImageColumn::make('payment_proof')
-                    ->label('Bukti')
-                    ->circular()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

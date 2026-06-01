@@ -1,7 +1,7 @@
 
 @vite(['resources/css/catalog.css'])
 @extends('layouts.app')
-@section('title', 'KudaBesiRent - Pilihan Kendaraan')
+@section('title', 'KudaBesiRent | Pilihan Kendaraan')
 @section('content')
     <x-header-catalog />
     <x-search-box />

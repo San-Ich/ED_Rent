@@ -75,6 +75,7 @@ class RentalForm
                         'Disewa' => 'Disewa',
                         'Selesai' => 'Selesai',
                         'Menunggu' => 'Menunggu',
+                        'Gagal' => 'Gagal'
                     ])
                     ->required()
                     ->columnSpan(1),
@@ -84,15 +85,6 @@ class RentalForm
                     ->live()
                     ->afterStateUpdated(fn($set, $get) => self::calculateTotal($set, $get))
                     ->columnSpan(3),
-
-                FileUpload::make('payment_proof')
-                    ->label('Bukti Pembayaran')
-                    ->image()
-                    ->directory('payment-proofs')
-                    ->visibility('public')
-                    ->openable()
-                    ->downloadable()
-                    ->helperText('Unggah struk transfer bank atau bukti bayar lainnya.'),
 
                 TextInput::make('kode_booking')
                     ->label('Kode Booking')

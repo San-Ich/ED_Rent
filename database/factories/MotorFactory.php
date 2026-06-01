@@ -52,7 +52,7 @@ class MotorFactory extends Factory
             'model' => $units['model'],
             'plate_nomor' => fake()->randomElement(['B', 'D', 'AB', 'DK', 'L', 'K', 'AB']) . ' ' . fake()->numberBetween(1000, 9999) . ' ' . strToUpper(fake()->bothify('??')),
             'harga_per_hari' => $units['harga'],
-            'status' => ('tersedia'),
+            'status' => ('Tersedia'),
         ];
     }
 }

@@ -12,23 +12,27 @@ use Illuminate\Support\Facades\Storage;
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
 
 Route::get('/catalog', [MotorController::class, 'index'])->name('catalog');
-Route::get('catalog/{slug}', [MotorController::class, 'show'])->name('catalog.show');
+Route::get('catalog/{id}', [MotorController::class, 'show'])->name('catalog.show');
 
-Route::get('/booking', [RentalController::class, 'index'])->name('booking');
+Route::post('/midtrans/webhook', [RentalController::class, 'midtransWebhook']);
 
 Route::middleware(['auth'])->group(function () {
-    
+
     Route::get('/checkout/{motor:slug}', [RentalController::class, 'checkout'])->name('checkout');
-    
+
     Route::post('/rental/store', [RentalController::class, 'store'])->name('rental.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/my-orders', [RentalController::class, 'index'])->name('customer.orders');
+    Route::post('/booking/store', [RentalController::class, 'store'])->name('booking.store');
 
-    Route::get('/my-orders', function () {
-        $rentals = Rental::where('user_id', Auth::id())->latest()->get();
-        return view('customer.orders.index', compact('rentals'));
-    })->name('customer.orders');
+
+    Route::get('/rental/{id}/download-struk', [RentalController::class, 'downloadStruk'])->name('customer.rental.download-struk');
+    Route::post('/rental/{id}/Konfirmasi-Motor', [RentalController::class, 'KonfirmasiMotor'])->name('customer.rental.kembalikan');
+    Route::get('/rental/{id}/Pembayaran-Denda', [RentalController::class, 'PembayaranDenda'])->name('customer.rental.denda');
+
+    Route::get('/orders/{id}/payment', [RentalController::class, 'paymentPage'])->name('customer.orders.payment');
     Route::middleware(['can:access-customer-features'])->group(function () {
         Route::get('/orders', [RentalController::class, 'index'])->name('customer.orders');
         Route::post('/rentals', [RentalController::class, 'store'])->name('rentals.store');

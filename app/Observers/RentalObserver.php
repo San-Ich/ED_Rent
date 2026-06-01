@@ -14,26 +14,32 @@ class RentalObserver
      */
     public function created(Rental $rental): void
     {
-        $rental->motor->update(['status' => 'dipesan']);
+        // $rental->motor->update(['status' => 'Disewa']);
     }
 
     public function updated(Rental $rental): void
     {
+        // Mengecek apakah kolom status di tabel rentals mengalami perubahan
         if ($rental->isDirty('status')) {
             $motor = $rental->motor;
 
+            if (!$motor) {
+                return;
+            }
+
             switch ($rental->status) {
-
-                case 'selesai':
-                    $motor->update(['status' => 'tersedia']);
+                case 'Disewa':
+                    $motor->update(['status' => 'Disewa']);
                     break;
 
-                case 'dibatalkan':
-                    $motor->update(['status' => 'tersedia']);
+                case 'Selesai':
+                case 'Gagal':
+                case 'Batal':
+                    $motor->update(['status' => 'Tersedia']);
                     break;
 
-                case 'dipesan':
-                    $motor->update(['status' => 'dipesan']);
+                case 'Pending Denda':
+                    // $motor->update(['status' => 'Tersedia']); 
                     break;
             }
         }
@@ -44,7 +50,7 @@ class RentalObserver
      */
     public function deleted(Rental $rental): void
     {
-        $rental->motor->update(['status' => 'tersedia']);
+        $rental->motor->update(['status' => 'Tersedia']);
     }
 
     /**

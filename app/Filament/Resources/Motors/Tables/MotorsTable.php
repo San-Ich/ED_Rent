@@ -41,14 +41,14 @@ class MotorsTable
                     ->badge()
                     ->color(
                         fn(string $state): string => match ($state) {
-                            'tersedia' => 'success',
+                            'Tersedia' => 'success',
                             'Perawatan' => 'danger',
                             'Disewa' => 'warning',
                             default => 'info',
                         }
                     )
                     ->icon(fn(string $state): string => match ($state) {
-                        'tersedia' => 'heroicon-m-check-circle',
+                        'Tersedia' => 'heroicon-m-check-circle',
                         'Perawatan' => 'heroicon-m-wrench',
                         'Disewa' => 'heroicon-m-no-symbol',
                         default => 'heroicon-m-question-mark-circle',

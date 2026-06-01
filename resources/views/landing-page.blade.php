@@ -1,5 +1,5 @@
 @extends('layouts.app')
-
+@section('tittle', 'KudaBesiRent | Home')
 @section('content')
     <x-hero />
     <x-search-widget />

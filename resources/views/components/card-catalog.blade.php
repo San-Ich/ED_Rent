@@ -18,11 +18,17 @@
                                 style="font-size: 0.75rem;">
                                 Tersedia
                             </span>
-                        @else
+                        @elseif ($motor->status === 'Disewa')
                             <span
                                 class="badge-status position-absolute top-3 inset-s-3 z-3 bg-danger text-white px-2.5 py-1 rounded-pill small fw-bold tracking-wide shadow-sm"
                                 style="font-size: 0.75rem;">
                                 Disewa
+                            </span>
+                        @else
+                            <span
+                                class="badge-status position-absolute top-3 inset-s-3 z-3 bg-secondary text-white px-2.5 py-1 rounded-pill small fw-bold tracking-wide shadow-sm"
+                                style="font-size: 0.75rem;">
+                                {{ $motor->status }}
                             </span>
                         @endif
 
@@ -76,12 +82,12 @@
                                     <span
                                         class="badge bg-light text-dark border border-secondary-subtle px-2 py-1 fw-bold font-monospace rounded"
                                         style="font-size: 0.75rem; letter-spacing: 0.5px;">
-                                        {{ $motor->plat_nomor ?? 'B 1234 ABC' }}
+                                        {{ $motor->plate_nomor ?? 'B 1234 ABC' }}
                                     </span>
                                 </div>
                             </div>
 
-                            <a href="{{ route('catalog.show', $motor->slug) }}"
+                            <a href="{{ route('catalog.show', $motor->id) }}"
                                 class="btn btn-carbon btn-sm w-100 py-2 rounded-pill fw-bold dynamic-btn"
                                 style="font-size: 0.8rem;">
                                 <i class="bi bi-bag-plus-fill me-1"></i> Sewa

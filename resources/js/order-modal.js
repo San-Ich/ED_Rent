@@ -1,14 +1,17 @@
 let orderModalInstance = null;
 
 window.showOrderDetail = function (
+    id,
     kode,
-    motorName,
+    motorName, 
     startDate,
     endDate,
     total,
     status,
     imgUrl,
+    hasProof,
 ) {
+
     const modalTitle = document.getElementById("modalTitleMotor");
     const modalBookingCode = document.getElementById("modalBookingCode");
     const modalMotorImg = document.getElementById("modalMotorImg");
@@ -18,9 +21,12 @@ window.showOrderDetail = function (
     const modalBreakdownBase = document.getElementById("modalBreakdownBase");
     const modalTotalPay = document.getElementById("modalTotalPay");
     const modalMainAction = document.getElementById("modalMainAction");
-
-    const modalHeader = document.querySelector(".modal-header-custom");
+    const modalHeader = document.getElementById("modalHeaderBg");
     const timelineIcons = document.querySelectorAll(".timeline-icon");
+
+    modalHeader.className =
+        "modal-header-custom d-flex justify-content-between align-items-center p-4 text-white";
+    modalHeader.style.background = "none";
 
     modalBookingCode.innerText = kode;
     modalMotorName.innerText = motorName;
@@ -28,42 +34,62 @@ window.showOrderDetail = function (
     modalReturnTime.innerHTML = `<i class="bi bi-clock me-1"></i> ${endDate}`;
     modalBreakdownBase.innerText = total;
     modalTotalPay.innerText = total;
+
     modalMotorImg.src = imgUrl
         ? imgUrl
         : "https://placehold.co/400x300/f8fafc/0f172a?text=Motor";
 
-    modalHeader.className =
-        "modal-header-custom d-flex justify-content-between align-items-center p-3 text-white";
-
-    if (status === "waiting" || status === "Menunggu") {
+    // LOGIKA PENENTUAN STATUS & BUTTON AKSI
+    if (status === "Gagal" || status === "Menunggu") {
         modalTitle.innerText = "Detail Booking: Menunggu Pembayaran";
         modalHeader.style.backgroundColor = "#d97706";
-        timelineIcons[0].className = "timeline-icon bg-warning text-white";
-        timelineIcons[1].className = "timeline-icon bg-light text-muted";
-        modalMainAction.innerHTML = `
-            <a href="/checkout/pay/${kode}" class="btn btn-dark py-2.5 rounded-pill fw-bold shadow-sm" style="background-color: #0f172a; border-color: #0f172a;">
-                <i class="bi bi-credit-card-2-front me-1"></i> Selesaikan Pembayaran
-            </a>
-        `;
+        if (timelineIcons[0])
+            timelineIcons[0].className =
+                "timeline-icon text-white bg-warning d-flex align-items-center justify-content-center rounded-circle";
+        if (timelineIcons[1])
+            timelineIcons[1].className =
+                "timeline-icon text-muted bg-light d-flex align-items-center justify-content-center rounded-circle";
+
+        if (!hasProof || hasProof === "0" || hasProof === 0) {
+            modalMainAction.innerHTML = `
+                <a href="/orders/${id}/payment" class="btn btn-dark py-2.5 rounded-pill fw-bold shadow-sm w-100 style="background-color: #0f172a; border-color: #0f172a;">
+                    <i class="bi bi-credit-card-2-front me-1"></i> Selesaikan Pembayaran
+                </a>
+            `;
+        } else {
+            modalMainAction.innerHTML = `
+                <div class="alert alert-warning text-center rounded-pill py-2 px-3 mb-0 fw-bold small border-0 w-100" style="background-color: #fffbeb; color: #b45309;">
+                    <i class="bi bi-hourglass-split me-1"></i> Menunggu Verifikasi Admin
+                </div>
+            `;
+        }
     } else if (status === "active" || status === "Disewa") {
         modalTitle.innerText = "Detail Booking: Sewa Aktif";
         modalHeader.style.backgroundColor = "#0369a1";
-        timelineIcons[0].className = "timeline-icon bg-primary text-white";
-        timelineIcons[1].className = "timeline-icon bg-primary text-white";
+        if (timelineIcons[0])
+            timelineIcons[0].className =
+                "timeline-icon text-white bg-primary d-flex align-items-center justify-content-center rounded-circle";
+        if (timelineIcons[1])
+            timelineIcons[1].className =
+                "timeline-icon text-white bg-primary d-flex align-items-center justify-content-center rounded-circle";
+
         modalMainAction.innerHTML = `
-            <a href="https://wa.me/..." target="_blank" class="btn btn-outline-dark py-2.5 rounded-pill fw-bold" style="border-color: #cbd5e1; color: #334155;">
-                <i class="bi bi-whatsapp me-1"></i> Bantuan Logistik
+            <a href="https://wa.me/628123456789" target="_blank" class="btn btn-outline-secondary py-2.5 rounded-pill fw-bold w-100" style="border-color: #cbd5e1; color: #334155;">
+                <i class="bi bi-whatsapp me-1"></i> Bantuan Logistik (WA)
             </a>
         `;
-    } else if (status === "completed" || status === "Selesai") {
+    } else {
         modalTitle.innerText = "Detail Booking: Transaksi Selesai";
         modalHeader.style.backgroundColor = "#15803d";
-        timelineIcons[0].className = "timeline-icon bg-success text-white";
-        timelineIcons[1].className = "timeline-icon bg-success text-white";
-        timelineIcons[0].innerHTML = '<i class="bi bi-check-lg"></i>';
-        timelineIcons[1].innerHTML = '<i class="bi bi-check-lg"></i>';
+        if (timelineIcons[0])
+            timelineIcons[0].className =
+                "timeline-icon text-white bg-success d-flex align-items-center justify-content-center rounded-circle";
+        if (timelineIcons[1])
+            timelineIcons[1].className =
+                "timeline-icon text-white bg-success d-flex align-items-center justify-content-center rounded-circle";
+
         modalMainAction.innerHTML = `
-            <a href="/catalog" class="btn btn-success py-2.5 rounded-pill fw-bold shadow-sm">
+            <a href="/catalog" class="btn btn-success py-2.5 rounded-pill fw-bold shadow-sm w-100">
                 <i class="bi bi-arrow-counterclockwise me-1"></i> Sewa Motor Lagi
             </a>
         `;

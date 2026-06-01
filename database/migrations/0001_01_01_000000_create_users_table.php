@@ -20,7 +20,7 @@ return new class extends Migration
             $table->enum('role', ['admin', 'user'])->default('user');
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
-            $table->integer('rental_limit')->default(2);
+            $table->integer('rental_limit')->default(15);
             $table->string('ktp_path')->nullable(); 
             $table->string('sim_path')->nullable();
             $table->boolean('is_verified')->default(false);

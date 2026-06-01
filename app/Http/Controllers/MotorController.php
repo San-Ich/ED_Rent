@@ -32,9 +32,9 @@ class MotorController extends Controller
         return view('catalog-page', compact('motors'));
     }
 
-    public function show($slug)
+    public function show($id)
     {
-        $motor = Motor::with(['specification', 'category'])->where('slug', $slug)->firstOrFail();
+        $motor = Motor::with(['specification', 'category'])->where('id', $id)->firstOrFail();
 
         $rekomendasiMotors = Motor::where('status', 'Tersedia')->where('id', '!=', $motor->id)->inRandomOrder()->take(8)->get();
         return view('detail-motor', compact('motor', 'rekomendasiMotors'));
