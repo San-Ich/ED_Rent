@@ -19,37 +19,55 @@ class UserForm
     {
         return $schema
             ->components([
+                // INFORMASI DASAR
                 Section::make('Informasi Dasar')
                     ->description('Data utama akun pengguna')
                     ->schema([
                         TextInput::make('name')
-                            ->required(),
+                            ->label('Nama Lengkap')
+                            ->required()
+                            ->maxLength(255),
+
                         TextInput::make('email')
-                            ->label('Email address')
+                            ->label('Alamat Email')
                             ->email()
                             ->required()
                             ->unique(ignoreRecord: true),
+
                         TextInput::make('password')
                             ->password()
                             ->dehydrateStateUsing(fn($state) => Hash::make($state))
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $context): bool => $context === 'create')
-                            ->label(fn(string $context): string => $context === 'edit' ? 'Ubah Password' : 'Password'),
+                            ->label(fn(string $context): string => $context === 'edit' ? 'Ubah Password (Kosongkan jika tidak diganti)' : 'Password'),
+
                         Select::make('role')
-                            ->options(['admin' => 'Admin', 'user' => 'User'])
+                            ->label('Hak Akses / Role')
+                            ->options([
+                                'admin' => 'Admin',
+                                'user' => 'User',
+                            ])
                             ->default('user')
                             ->required(),
+
                         TextInput::make('phone')
-                            ->tel(),
-                        Textarea::make('address')
-                            ->columnSpanFull(),
-                    ])->columns(2),
+                            ->label('Nomor WhatsApp')
+                            ->tel()
+                            ->maxLength(20),
+
                         TextInput::make('rental_limit')
                             ->label('Limit Sewa Aktif')
                             ->numeric()
-                            ->default(2)
-                            ->minValue(2)
-                            ->helperText('Jumlah maksimal motor yang bisa disewa secara bersamaan.'),
+                            ->default(15)
+                            ->minValue(1)
+                            ->helperText('Jumlah maksimal hari / motor yang diizinkan untuk disewa.'),
+
+                        Textarea::make('address')
+                            ->label('Alamat Lengkap')
+                            ->columnSpanFull(),
+                    ])->columns(2),
+
+                // VERIFIKASI IDENTITAS
                 Section::make('Verifikasi Identitas')
                     ->description('Dokumen pendukung untuk validasi penyewa motor')
                     ->schema([
@@ -59,35 +77,52 @@ class UserForm
                             ->live()
                             ->imageEditor()
                             ->maxSize(2048)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
+                            ->disk('public')
+                            ->directory('identity/ktp')
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
                             ->validationMessages([
                                 'max' => 'Ukuran foto KTP terlalu besar, maksimal 2MB.',
-                                'accepted_file_types' => 'Format harus JPG atau PNG.',
+                                'accepted_file_types' => 'Format harus JPG, PNG, atau WEBP.',
                             ])
-                            ->directory('identitas-ktp')
-                            ->visibility('private')
-                            ->getUploadedFileNameForStorageUsing(function ($file) {
-                                return "ktp-" . Auth::id() . "-" . time() . "." . $file->getClientOriginalExtension();
+                            ->getUploadedFileNameForStorageUsing(function ($file, $get) {
+                                $userId = $get('id') ?? time();
+                                return "ktp-" . $userId . "-" . time() . "." . $file->getClientOriginalExtension();
                             })
                             ->afterStateUpdated(function (Set $set) {
                                 $set('is_verified', false);
                             })
                             ->previewable(true)
-                            ->downloadable()
-                            ->columnSpan(1),
+                            ->downloadable(),
 
                         FileUpload::make('sim_path')
                             ->label('Foto SIM C')
                             ->image()
+                            ->live()
+                            ->imageEditor()
                             ->maxSize(2048)
-                            ->directory('identitas-sim')
-                            ->visibility('private')
-                            ->helperText('Pastikan masa berlaku SIM masih aktif.'),
+                            ->disk('public')
+                            ->directory('identity/sim')
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
+                            ->validationMessages([
+                                'max' => 'Ukuran foto SIM terlalu besar, maksimal 2MB.',
+                                'accepted_file_types' => 'Format harus JPG, PNG, atau WEBP.',
+                            ])
+                            ->getUploadedFileNameForStorageUsing(function ($file, $get) {
+                                $userId = $get('id') ?? time();
+                                return "sim-" . $userId . "-" . time() . "." . $file->getClientOriginalExtension();
+                            })
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('is_verified', false);
+                            })
+                            ->helperText('Pastikan masa berlaku SIM masih aktif.')
+                            ->previewable(true)
+                            ->downloadable(),
 
                         Toggle::make('is_verified')
                             ->label('Verifikasi Identitas User')
                             ->onColor('success')
-                            ->helperText('Aktifkan jika KTP dan SIM sudah dicek keasliannya.')
+                            ->offColor('danger')
+                            ->helperText('Aktifkan jika foto KTP dan SIM di atas sudah diperiksa keasliannya.')
                             ->columnSpanFull(),
                     ])->columns(2),
             ]);

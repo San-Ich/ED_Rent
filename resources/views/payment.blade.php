@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('tittle', 'KudaBesiRent | Payment')
 @section('content')
-    <x-detail-payment :rental="$rental" />
+    <x-detail-payment :rental="$rental" :penalty="$penalty ?? 0" />
     <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js"
         data-client-key="{{ env('MIDTRANS_CLIENT_KEY') }}"></script>
 

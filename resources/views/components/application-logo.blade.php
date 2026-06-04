@@ -1,0 +1,1 @@
+<img src="{{ asset('storage/images/logo.webp') }}" alt="Logo KudaBesiRent" class="img-fluid" style="max-height: 80px; object-fit: contain;">

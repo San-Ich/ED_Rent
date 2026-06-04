@@ -6,6 +6,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -16,46 +17,68 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->label('Email address')
-                    ->searchable(),
-                TextColumn::make('email_verified_at')
-                    ->dateTime()
+                    ->searchable()
                     ->sortable(),
+
+                TextColumn::make('email')
+                    ->label('Email Address')
+                    ->searchable(),
+
+                TextColumn::make('phone')
+                    ->label('No. WhatsApp')
+                    ->searchable(),
+
                 TextColumn::make('role')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'admin' => 'danger',
                         'user' => 'success',
                     }),
-                    TextColumn::make('rental_limit')
-                        ->label('Limit Sewa')
-                        ->sortable(),
-                    IconColumn::make('ktp_path')
-                        ->label('Dokumen')
-                        ->boolean()
-                        ->trueIcon('heroicon-o-identification')
-                        ->falseIcon('heroicon-o-x-circle')
-                        ->trueColor('primary')
-                        ->falseColor('gray'),
-                    IconColumn::make('is_verified')
-                        ->label('Verified')
-                        ->boolean()
-                        ->sortable(),
-                    TextColumn::make('phone')
-                        ->searchable(),
-                    TextColumn::make('address')
-                        ->searchable(),
-                    TextColumn::make('created_at')
-                        ->dateTime()
-                        ->sortable()
-                        ->toggleable(isToggledHiddenByDefault: true),
-                    TextColumn::make('updated_at')
-                        ->dateTime()
-                        ->sortable()
-                        ->toggleable(isToggledHiddenByDefault: true),
-                ])
+
+                TextColumn::make('rental_limit')
+                    ->label('Limit Sewa (Hari)')
+                    ->sortable()
+                    ->alignCenter(),
+
+            ImageColumn::make('ktp_path')
+                ->label('Foto KTP')
+                ->disk('public')
+                ->square()
+                ->size(50)
+                ->placeholder('Belum Upload')
+                ->url(fn($record) => $record->ktp_path ? asset('storage/' . $record->ktp_path) : null)
+                ->openUrlInNewTab(),
+
+            ImageColumn::make('sim_path')
+                ->label('Foto SIM')
+                ->disk('public')
+                ->square()
+                ->size(50)
+                ->placeholder('Belum Upload')
+                ->url(fn($record) => $record->sim_path ? asset('storage/' . $record->sim_path) : null)
+                ->openUrlInNewTab(),
+
+                IconColumn::make('is_verified')
+                    ->label('Status Verifikasi')
+                    ->boolean()
+                    ->sortable()
+                    ->alignCenter(),
+
+                TextColumn::make('address')
+                    ->label('Alamat')
+                    ->limit(30)
+                    ->searchable(),
+
+                TextColumn::make('email_verified_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
             ->filters([
                 //
             ])

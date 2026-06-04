@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Midtrans\Config;
 use Midtrans\Snap;
 
@@ -56,10 +57,10 @@ class RentalController extends Controller
     public function store(Request $request)
     {
         // Validasi Akun Terverifikasi
-        // if (!Auth::user()->is_verified) {
-        //     return redirect()->route('profile.edit')
-        //         ->with('error', 'Silakan lengkapi profil dan tunggu verifikasi KTP/SIM sebelum menyewa.');
-        // }
+        if (!Auth::user()->is_verified) {
+            return redirect()->route('profile.index')
+                ->with('error', 'Silakan lengkapi profil dan tunggu verifikasi KTP/SIM sebelum menyewa.');
+        }
 
         // Batasan Limit Sewa Akun
         $user = Auth::user();
@@ -174,11 +175,15 @@ class RentalController extends Controller
         $serverKey = env('MIDTRANS_SERVER_KEY');
         $localSignature = hash("sha512", $orderId . $statusCode . $grossAmount . $serverKey);
 
+        $statusMurni = strtolower($transactionStatus);
+
+        Log::info('Midtrans Webhook Masuk. Order ID: ' . $orderId . ' | Status Asli: ' . $transactionStatus . ' | Status Murni: ' . $statusMurni . ' | Amount: ' . $grossAmount);
+
         if ($signatureKey !== $localSignature) {
+            Log::error('Webhook Gagal: Invalid Signature untuk Order ID ' . $orderId);
             return response()->json(['message' => 'Invalid Signature'], 403);
         }
 
-        // Cek apakah ini transaksi pembayaran denda atau sewa biasa
         $isDendaPayment = str_starts_with($orderId, 'DENDA-');
 
         if ($isDendaPayment) {
@@ -191,17 +196,22 @@ class RentalController extends Controller
         $rental = Rental::where('kode_booking', $actualOrderId)->first();
 
         if (!$rental) {
+            Log::error('Webhook Gagal: Transaksi tidak ditemukan untuk Kode Booking: ' . $actualOrderId);
             return response()->json(['message' => 'Transaksi tidak ditemukan'], 404);
         }
 
-        if ($transactionStatus == 'capture' || $transactionStatus == 'settlement') {
+        if ($statusMurni == 'capture' || $statusMurni == 'settlement') {
 
             if ($isDendaPayment) {
-                $rental->update(['status' => 'Selesai']);
+                Rental::where('id', $rental->id)->update([
+                    'status'  => 'Selesai',
+                    'penalty' => (int) $grossAmount
+                ]);
 
                 if ($rental->motor_id) {
                     Motor::where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
                 }
+                Log::info('Denda Berhasil Diupdate ke Database untuk Booking: ' . $actualOrderId);
             } else {
                 $rental->update(['status' => 'Disewa']);
 
@@ -209,15 +219,15 @@ class RentalController extends Controller
                     Motor::where('id', $rental->motor_id)->update(['status' => 'Disewa']);
                 }
             }
-        } elseif ($transactionStatus == 'pending') {
+        } elseif ($statusMurni == 'pending') {
 
             if (!$isDendaPayment) {
                 $rental->update(['status' => 'Menunggu']);
             }
-        } elseif (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+        } elseif (in_array($statusMurni, ['deny', 'expire', 'cancel'])) {
 
             if ($isDendaPayment) {
-                $rental->update(['status' => 'Pending Denda']);
+                Rental::where('id', $rental->id)->update(['status' => 'Pending Denda']);
             } else {
                 $rental->update(['status' => 'Gagal']);
 
@@ -292,18 +302,15 @@ class RentalController extends Controller
         $waktuSekarang = Carbon::now('Asia/Jakarta')->startOfDay();
         $waktuRencanaKembali = Carbon::parse($rental->tanggal_rencana_kembali, 'Asia/Jakarta')->startOfDay();
 
-        $penaltyNominal = max(0, (int) $rental->total_harga);
+        $penaltyNominal = 0;
 
-        if ($waktuSekarang->gt($waktuRencanaKembali)) {
-            $selisihHari = abs($waktuRencanaKembali->diffInDays($waktuSekarang));
+        $selisihHari = $waktuRencanaKembali->diffInDays($waktuSekarang, false);
 
-            if ($selisihHari > 0) {
-                $dendaPerHari = 50000;
+        if ($rental->status === 'Pending Denda') {
+            $hariTerlambat = $selisihHari > 0 ? $selisihHari : 1;
 
-                $totalDendaHitung = ($rental->motor->harga_per_hari + $dendaPerHari) * $selisihHari;
-
-                $penaltyNominal = max(0, $totalDendaHitung);
-            }
+            $dendaPerHari = 50000;
+            $penaltyNominal = $dendaPerHari * $hariTerlambat;
         }
 
         if ($rental->status !== 'Pending Denda' || $penaltyNominal <= 0) {

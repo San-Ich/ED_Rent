@@ -65,7 +65,6 @@ class User extends Authenticatable
 
     public function canAccessPanel(Panel $panel): bool
     {
-        dd('Kodenya jalan sampai sini!');
         return $this->role === 'admin';
     }
 }
