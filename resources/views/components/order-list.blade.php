@@ -42,19 +42,34 @@
                                 @elseif($order->status == 'Selesai')
                                     <span class="badge-status-completed"><i class="bi bi-check-circle-fill me-1"></i>
                                         Selesai</span>
-                                @elseif($order->status === 'Pending Denda' && $order->penalty > 0)
+                                @elseif($order->status === 'Pending Denda')
+                                    @php
+                                        $waktuSekarang = \Carbon\Carbon::now('Asia/Jakarta')->startOfDay();
+                                        $waktuRencanaKembali = \Carbon\Carbon::parse(
+                                            $order->tanggal_rencana_kembali,
+                                            'Asia/Jakarta',
+                                        )->startOfDay();
+
+                                        $selisihHari = $waktuSekarang->gt($waktuRencanaKembali)
+                                            ? $waktuRencanaKembali->diffInDays($waktuSekarang)
+                                            : 0;
+                                        $tarifDenda = 50000;
+                                        $totalDendaMurni = $selisihHari * $tarifDenda;
+                                    @endphp
+
                                     <div
                                         class="alert alert-danger border-0 rounded-4 p-3 mt-3 d-flex align-items-start gap-3 shadow-sm">
                                         <i class="bi bi-exclamation-triangle-fill fs-4 text-danger"></i>
                                         <div>
-                                            <span class="fw-bold d-block text-danger mb-1"
-                                                style="font-size: 0.9rem;">Terlambat Mengembalikan Motor!</span>
+                                            <span class="fw-bold d-block text-danger mb-1" style="font-size: 0.9rem;">
+                                                Terlambat Mengembalikan Motor! (Telat {{ $selisihHari }} Hari)
+                                            </span>
                                             <p class="text-secondary mb-2" style="font-size: 0.85rem;">
                                                 Anda dikenakan denda keterlambatan karena mengembalikan motor melewati
                                                 batas waktu rencana kembali.
                                             </p>
                                             <span class="badge bg-danger fs-6 px-3 py-1.5 rounded-pill fw-bold">
-                                                Total Denda: Rp {{ number_format($order->penalty, 0, ',', '.') }}
+                                                Total Denda: Rp {{ number_format($totalDendaMurni, 0, ',', '.') }}
                                             </span>
                                         </div>
                                     </div>

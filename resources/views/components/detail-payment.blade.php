@@ -4,7 +4,7 @@
 
             <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
                 <div class="p-4 text-white" style="background: linear-gradient(135deg, #111827 0%, #1f2937 100%);">
-                    <h4 class="fw-extrabold mb-1">Metode Pembayaran Sesi #{{ $rental->kode_booking }}</h4>
+                    <h4 class="fw-extrabold mb-1">Metode Pembayaran Sesi {{ $rental->kode_booking }}</h4>
                     <p class="text-white-50 small mb-0">Sistem terintegrasi otomatis secara aman dengan Midtrans Payment
                         Gateway.</p>
                 </div>
@@ -57,10 +57,11 @@
 
                                 <h2 class="fw-extrabold text-dark mb-0">
                                     @if (($rental->status ?? $order->status) === 'Pending Denda')
-                                        <span class="text-danger">Rp
-                                            {{ number_format($rental->total_harga, 0, ',', '.') }}</span>
+                                        <span class="text-danger">
+                                            Rp {{ number_format($penalty ?? 0, 0, ',', '.') }}
+                                        </span>
                                     @else
-                                        Rp {{ number_format($rental->total_harga, 0, ',', '.') }}
+                                        Rp {{ number_format($rental->total_harga ?? 0, 0, ',', '.') }}
                                     @endif
                                 </h2>
 

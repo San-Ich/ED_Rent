@@ -74,7 +74,7 @@
                                 </div>
                             </div>
 
-                            <a href="#"
+                            <a href="{{ route('catalog', ['category' => $motor->category->name ?? '', 'search' => $motor->model]) }}"
                                 class="btn btn-dark btn-hover-effect w-100 py-25 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
                                 <i class="bi bi-calendar-check-fill small"></i> Sewa Sekarang
                             </a>
