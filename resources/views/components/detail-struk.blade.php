@@ -1,152 +1,335 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Struk Pembayaran</title>
+    <title>Struk Pembayaran - {{ $rental->kode_booking }}</title>
     <style>
         body {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        color: #333;
-        line-height: 1.6;
-    }
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #18181b;
+            background-color: #ffffff;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
 
-    .invoice-box {
-        max-width: 800px;
-        margin: auto;
-        padding: 30px;
-        border: 1px solid #eee;
-        box-shadow: 0 0 10px rgba(0, 0, 0, .15);
-        font-size: 16px;
-    }
+        .invoice-box {
+            max-width: 750px;
+            margin: 40px auto;
+            padding: 40px;
+            border: 1px solid #e4e4e7;
+            background: #ffffff;
+        }
 
-    .invoice-box table {
-        width: 100%;
-        line-height: inherit;
-        text-align: left;
-        border-collapse: collapse;
-    }
+        /* Header Setup */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 35px;
+        }
 
-    .invoice-box table td {
-        padding: 5px;
-        vertical-align: top;
-    }
+        .header-table td {
+            vertical-align: top;
+        }
 
-    .invoice-box table tr td:nth-child(2) {
-        text-align: right;
-    }
+        .brand-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            color: #000000;
+            margin: 0;
+        }
 
-    .invoice-box table tr.top table td {
-        padding-bottom: 20px;
-    }
+        .meta-text {
+            text-align: right;
+            font-size: 13px;
+            color: #52525b;
+            line-height: 1.6;
+        }
 
-    .invoice-box table tr.top table td.title {
-        font-size: 45px;
-        line-height: 45px;
-        color: #333;
-        font-weight: bold;
-    }
+        .meta-text strong {
+            color: #000000;
+        }
 
-    .invoice-box table tr.information table td {
-        padding-bottom: 40px;
-    }
+        .badge-mono {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            margin-top: 5px;
+        }
 
-    .invoice-box table tr.heading td {
-        background: #eee;
-        border-bottom: 1px solid #ddd;
-        font-weight: bold;
-    }
+        
+        .divider {
+            border-top: 1px solid #18181b;
+            margin: 20px 0;
+        }
 
-    .invoice-box table tr.details td {
-        padding-bottom: 20px;
-    }
+        /* Info Section (Penyewa & Penyedia) */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
 
-    .invoice-box table tr.item td {
-        border-bottom: 1px solid #eee;
-    }
+        .info-table td {
+            width: 50%;
+            vertical-align: top;
+            font-size: 14px;
+            color: #52525b;
+            line-height: 1.6;
+        }
 
-    .invoice-box table tr.item.last td {
-        border-bottom: none;
-    }
+        .info-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #000000;
+            margin-bottom: 6px;
+        }
 
-    .invoice-box table tr.total td:nth-child(2) {
-        border-top: 2px solid #eee;
-        font-weight: bold;
-        color: #28a745;
-    }
+        .info-value-dark {
+            color: #000000;
+            font-weight: 500;
+        }
 
-    .badge-success {
-        background-color: #28a745;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: bold;
-    }
+        /* Rincian Item Finansial & Logistik */
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .item-table th {
+            background: #f4f4f5;
+            color: #000000;
+            text-align: left;
+            padding: 12px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #18181b;
+        }
+
+        .item-table td {
+            padding: 16px 14px;
+            font-size: 14px;
+            border-bottom: 1px solid #e4e4e7;
+            vertical-align: middle;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .item-subtext {
+            font-size: 12px;
+            color: #71717a;
+            margin-top: 4px;
+        }
+
+        /* Kalkulasi Total Pembayaran */
+        .calculation-table {
+            width: 380px;
+            margin-left: auto;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+
+        .calculation-table td {
+            padding: 8px 14px;
+            font-size: 14px;
+            color: #52525b;
+        }
+
+        .calculation-table tr.grand-total td {
+            padding-top: 15px;
+            border-top: 1px solid #e4e4e7;
+            font-size: 18px;
+            font-weight: 700;
+            color: #000000;
+        }
+
+        /* Footer Nota */
+        .invoice-footer {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 12px;
+            color: #71717a;
+            line-height: 1.6;
+            border-top: 1px dashed #e4e4e7;
+            padding-top: 25px;
+        }
     </style>
 </head>
+
 <body>
+
     <div class="invoice-box">
-    <table>
-        <tr class="top">
-            <td colspan="2">
-                <table>
+        <table class="header-table">
+            <tr>
+                <td>
+                    <h1 class="brand-title">KudaBesiRent</h1>
+                    <div class="item-subtext">Premium Motorcycle Rental</div>
+                </td>
+                <td class="meta-text">
+                    <strong>KODE BOOKING:</strong> {{ $rental->kode_booking }}<br>
+                    <strong>Tanggal Cetak:</strong> {{ date('d M Y') }}<br>
+                    <span class="badge-mono">{{ strtoupper($rental->status) }}</span>
+                </td>
+            </tr>
+        </table>
+
+        <div class="divider"></div>
+
+        <table class="info-table">
+            <tr>
+                <td>
+                    <div class="info-title">Diterbitkan Untuk:</div>
+                    <div class="info-value-dark">{{ $rental->user->name }}</div>
+                    <div>{{ $rental->user->email }}</div>
+                    <div>{{ $rental->user->phone ?? '-' }}</div>
+                </td>
+                <td class="text-right">
+                    <div class="info-title">Metode Distribusi & Jadwal:</div>
+                    <div>Ambil: <span
+                            class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_mulai)->translatedFormat('d F Y') }}</span>
+                    </div>
+                    <div>Kembali: <span
+                            class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_rencana_kembali)->translatedFormat('d F Y') }}</span>
+                    </div>
+                    @if ($rental->alamat_pengantaran)
+                        <div class="item-subtext" style="max-width: 250px; display: inline-block;">
+                            <strong>Alamat Kirim:</strong> {{ $rental->alamat_pengantaran }}
+                        </div>
+                    @else
+                        <div class="item-subtext"><strong>Sistem:</strong> Ambil Sendiri di Garasi</div>
+                    @endif
+                </td>
+            </tr>
+        </table>
+
+        @php
+            // Logika hitung durasi hari secara akurat sesuai form booking
+            $tglMulai = \Carbon\Carbon::parse($rental->tanggal_mulai);
+            $tglKembali = \Carbon\Carbon::parse($rental->tanggal_rencana_kembali);
+            $totalHari = ceil($tglMulai->diffInHours($tglKembali) / 24) ?: 1;
+
+            $hargaDasarMotor = $rental->motor->harga_per_hari ?? 0;
+            $subtotalMotor = $hargaDasarMotor * $totalHari;
+
+            // Cek biaya pengantaran (sesuai data form lama Anda Rp 75.000 jika delivery)
+            $biayaAntar = $rental->alamat_pengantaran ? 75000 : 0;
+        @endphp
+
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th>Deskripsi Sewa</th>
+                    <th class="text-right">Durasi</th>
+                    <th class="text-right">Harga Harian</th>
+                    <th class="text-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="item-name">{{ $rental->motor->model }}</div>
+                        <div class="item-subtext">Kendaraan Utama Utama</div>
+                    </td>
+                    <td class="text-right">{{ $totalHari }} Hari</td>
+                    <td class="text-right">Rp {{ number_format($hargaDasarMotor, 0, ',', '.') }}</td>
+                    <td class="text-right">Rp {{ number_format($subtotalMotor, 0, ',', '.') }}</td>
+                </tr>
+
+                @if ($rental->perlengkapan && $rental->perlengkapan->count() > 0)
+                    @foreach ($rental->perlengkapan as $item)
+                        @php
+                            $hargaItem = $item->harga ?? ($item->pivot->harga_per_hari ?? ($item->data_harga ?? 0));
+                            if (!$hargaItem && isset($item->nama_perlengkapan)) {
+                                // Cadangan jika nama relasi memerlukan penyesuaian nilai
+                                $hargaItem = $item->harga_per_hari ?? 0;
+                            }
+                            $subtotalItem = $hargaItem * $totalHari;
+                        @endphp
+                        <tr>
+                            <td>
+                                <div class="item-name"><i class="bi bi-plus-circle-fill" style="font-size: 10px;"></i> +
+                                    {{ $item->nama_perlengkapan }}</div>
+                                <div class="item-subtext">Perlengkapan Tambahan Ekstra</div>
+                            </td>
+                            <td class="text-right">{{ $totalHari }} Hari</td>
+                            <td class="text-right">Rp {{ number_format($hargaItem, 0, ',', '.') }}</td>
+                            <td class="text-right">Rp {{ number_format($subtotalItem, 0, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                @endif
+
+                @if ($biayaAntar > 0)
                     <tr>
-                        <td class="title" style="color: #1e3a8a;">KudaBesiRent</td>
                         <td>
-                            Kode Booking: {{ $rental->kode_booking }}<br>
-                            Tanggal Cetak: {{ date('d M Y') }}<br>
-                            Status: <span class="badge-success">LUNAS / DI SEWA</span>
+                            <div class="item-name">Biaya Antar & Jemput Unit</div>
+                            <div class="item-subtext">Pengantaran Langsung ke Alamat Tujuan</div>
                         </td>
+                        <td class="text-right">-</td>
+                        <td class="text-right">-</td>
+                        <td class="text-right">Rp {{ number_format($biayaAntar, 0, ',', '.') }}</td>
                     </tr>
-                </table>
-            </td>
-        </tr>
+                @endif
+            </tbody>
+        </table>
 
-        <tr class="information">
-            <td colspan="2">
-                <table>
-                    <tr>
-                        <td>
-                            <strong>Penyewa:</strong><br>
-                            {{ $rental->user->name }}<br>
-                            {{ $rental->user->email }}
-                        </td>
-                        <td>
-                            <strong>Penyedia Layanan:</strong><br>
-                            KudaBesiRent Admin<br>
-                            Garasi Pusat Kota, Indonesia
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+        <table class="calculation-table">
+            <tr>
+                <td>Sewa Dasar Unit</td>
+                <td class="text-right">Rp {{ number_format($subtotalMotor, 0, ',', '.') }}</td>
+            </tr>
+            @if ($rental->perlengkapan && $rental->perlengkapan->count() > 0)
+                @php
+                    $totalAddon =
+                        $rental->perlengkapan->sum(function ($i) {
+                            return $i->harga_per_hari ?? ($i->harga ?? 0);
+                        }) * $totalHari;
+                @endphp
+                <tr>
+                    <td>Total Opsional Perlengkapan</td>
+                    <td class="text-right">Rp {{ number_format($totalAddon, 0, ',', '.') }}</td>
+                </tr>
+            @endif
+            @if ($biayaAntar > 0)
+                <tr>
+                    <td>Tarif Layanan Pengantaran</td>
+                    <td class="text-right">Rp {{ number_format($biayaAntar, 0, ',', '.') }}</td>
+                </tr>
+            @endif
+            <tr class="grand-total">
+                <td>Total Dibayarkan</td>
+                <td class="text-right">Rp {{ number_format($rental->total_harga, 0, ',', '.') }}</td>
+            </tr>
+        </table>
 
-        <tr class="heading">
-            <td>Detail Unit Motor</td>
-            <td>Harga / Hari</td>
-        </tr>
-
-        <tr class="item">
-            <td>
-                {{ $rental->motor->model }}
-                ({{ \Carbon\Carbon::parse($rental->tanggal_rencana_kembali)->diffInDays(\Carbon\Carbon::parse($rental->tanggal_mulai)) }}
-                Hari)
-            </td>
-            <td>Rp {{ number_format($rental->motor->harga_per_hari, 0, ',', '.') }}</td>
-        </tr>
-
-        <tr class="total">
-            <td></td>
-            <td>Total Bayar: Rp {{ number_format($rental->total_harga, 0, ',', '.') }}</td>
-        </tr>
-    </table>
-    <div style="margin-top: 50px; text-align: center; font-size: 12px; color: #777;">
-        Terima kasih telah mempercayakan perjalanan Anda bersama KudaBesiRent.<br>
-        Harap tunjukkan struk digital ini saat pengambilan unit motor di garasi kami.
+        <div class="invoice-footer">
+            Terima kasih telah mempercayakan perjalanan Anda bersama <strong>KudaBesiRent</strong>.<br>
+            Salinan nota digital ini diterbitkan secara sah dan otomatis. Harap tunjukkan dokumen berkode QR / Booking
+            ini<br>
+            pada saat serah terima fisik kendaraan di lokasi operasional kami.
+        </div>
     </div>
-</div>
+
 </body>
+
 </html>

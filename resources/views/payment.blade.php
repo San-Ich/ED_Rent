@@ -7,23 +7,36 @@
 
     <script type="text/javascript">
         const payButton = document.getElementById('pay-button');
-        payButton.addEventListener('click', function() {
+
+        function openMidtransSnap() {
             window.snap.pay('{{ $snapToken }}', {
                 onSuccess: function(result) {
-                    alert("Pembayaran Berhasil!");
-                    window.location.href = "{{ route('customer.orders') }}";
+
+                    window.location.href = "{{ route('payment.success', $rental->id) }}";
                 },
                 onPending: function(result) {
-                    alert("Menunggu penyelesaian pembayaran Anda.");
-                    window.location.href = "{{ route('customer.orders') }}";
+                    alert("Instruksi pembayaran telah dibuat. Silakan selesaikan pembayaran Anda.");
+                    window.location.reload();
                 },
                 onError: function(result) {
-                    alert("Terjadi kegagalan sistem pembayaran.");
+
+                    window.location.href = "{{ route('payment.failed', $rental->id) }}";
                 },
                 onClose: function() {
-                    alert('Anda menutup halaman pembayaran sebelum selesai.');
+                    console.log('User menutup halaman pembayaran sebelum selesai.');
                 }
             });
+        }
+
+
+        document.addEventListener("DOMContentLoaded", function() {
+
         });
+
+        if (payButton) {
+            payButton.addEventListener('click', function() {
+                openMidtransSnap();
+            });
+        }
     </script>
 @endsection

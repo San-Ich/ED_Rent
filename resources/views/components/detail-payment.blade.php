@@ -68,17 +68,36 @@
                             </div>
 
                             <div class="d-grid gap-2">
+
                                 <button type="button" id="pay-button"
-                                    class="btn btn-primary py-3 rounded-pill fw-bold shadow"
+                                    class="btn btn-primary py-3 rounded-pill fw-bold shadow mb-1"
                                     style="background-color: #2563eb; border-color: #2563eb;">
-                                    <i class="bi bi-shield-lock-fill me-2"></i> Bayar Sekarang
+                                    <i class="bi bi-credit-card-2-front-fill me-2"></i> Bayar Online (Transfer/QRIS)
                                 </button>
+
+
+                                <div class="text-center my-1">
+                                    <span class="badge bg-light text-muted border px-3 py-1.5 rounded-pill small"
+                                        style="font-size: 0.75rem;">Atau bayar langsung di tempat</span>
+                                </div>
+
+
+                                <form action="{{ route('customer.rental.pay-cash', $rental->id) }}" method="POST"
+                                    id="cash-payment-form">
+                                    @csrf
+                                    <button type="button" onclick="confirmCashPayment()"
+                                        class="btn btn-success py-3 rounded-pill fw-bold shadow w-100"
+                                        style="background-color: #10b981; border-color: #10b981;">
+                                        <i class="bi bi-wallet2 me-2"></i> Bayar Cash di Garasi
+                                    </button>
+                                </form>
 
                                 <a href="{{ route('customer.orders') }}"
                                     class="btn btn-link text-secondary text-decoration-none small text-center mt-2">
                                     <i class="bi bi-arrow-left me-1"></i> Kembali ke Order List
                                 </a>
                             </div>
+
                         </div>
 
                     </div>
@@ -88,3 +107,13 @@
         </div>
     </div>
 </div>
+
+<script>
+    function confirmCashPayment() {
+        if (confirm(
+                "Apakah Anda yakin ingin memilih metode Pembayaran Cash di tempat?\n\nAdmin akan langsung kami kabari untuk menyiapkan unit motor Anda."
+            )) {
+            document.getElementById('cash-payment-form').submit();
+        }
+    }
+</script>

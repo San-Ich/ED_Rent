@@ -52,7 +52,7 @@
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center gap-2 text-primary fw-bold"
                                         href="/admin">
-                                        <i class="bi bi-speedometer2"></i> Panel Admin (Filament)
+                                        <i class="bi bi-speedometer2"></i> Panel Admin
                                     </a>
                                 </li>
                                 <li>

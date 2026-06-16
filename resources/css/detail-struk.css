@@ -1,0 +1,168 @@
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #18181b;
+    background-color: #ffffff;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+}
+
+.invoice-box {
+    max-width: 750px;
+    margin: 40px auto;
+    padding: 40px;
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+}
+
+/* Header Setup */
+.header-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 35px;
+}
+
+.header-table td {
+    vertical-align: top;
+}
+
+.brand-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    color: #000000;
+    margin: 0;
+}
+
+.meta-text {
+    text-align: right;
+    font-size: 13px;
+    color: #52525b;
+    line-height: 1.6;
+}
+
+.meta-text strong {
+    color: #000000;
+}
+
+.badge-mono {
+    background-color: #000000;
+    color: #ffffff;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+/* Divider Line */
+.divider {
+    border-top: 1px solid #18181b;
+    margin: 20px 0;
+}
+
+/* Info Section (Penyewa & Penyedia) */
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 40px;
+}
+
+.info-table td {
+    width: 50%;
+    vertical-align: top;
+    font-size: 14px;
+    color: #52525b;
+    line-height: 1.6;
+}
+
+.info-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #000000;
+    margin-bottom: 6px;
+}
+
+.info-value-dark {
+    color: #000000;
+    font-weight: 500;
+}
+
+/* Rincian Item Finansial & Logistik */
+.item-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+}
+
+.item-table th {
+    background: #f4f4f5;
+    color: #000000;
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #18181b;
+}
+
+.item-table td {
+    padding: 16px 14px;
+    font-size: 14px;
+    border-bottom: 1px solid #e4e4e7;
+    vertical-align: middle;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.item-name {
+    font-weight: 600;
+    color: #000000;
+}
+
+.item-subtext {
+    font-size: 12px;
+    color: #71717a;
+    margin-top: 4px;
+}
+
+/* Kalkulasi Total Pembayaran */
+.calculation-table {
+    width: 380px;
+    margin-left: auto;
+    border-collapse: collapse;
+    margin-bottom: 40px;
+}
+
+.calculation-table td {
+    padding: 8px 14px;
+    font-size: 14px;
+    color: #52525b;
+}
+
+.calculation-table tr.grand-total td {
+    padding-top: 15px;
+    border-top: 1px solid #e4e4e7;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+}
+
+/* Footer Nota */
+.invoice-footer {
+    margin-top: 60px;
+    text-align: center;
+    font-size: 12px;
+    color: #71717a;
+    line-height: 1.6;
+    border-top: 1px dashed #e4e4e7;
+    padding-top: 25px;
+}

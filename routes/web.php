@@ -22,6 +22,8 @@ Route::middleware('auth')->group(function () {
     // AREA PROFIL CUSTOMER (Sudah disatukan dan tidak tabrakan lagi)
     Route::get('/customer-profile', [ProfileController::class, 'index'])->name('customer.profile');
     Route::put('/customer-profile/update', [ProfileController::class, 'update'])->name('customer.profile.update');
+    Route::post('/profile/request-verification', [ProfileController::class, 'requestVerification'])
+        ->name('customer.profile.request-verification');
 
     // RUTE CATALOG & CHECKOUT
     // Route::get('/checkout/{motor:slug}', [RentalController::class, 'checkout'])->name('checkout');
@@ -36,6 +38,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/rental/{id}/Konfirmasi-Motor', [RentalController::class, 'KonfirmasiMotor'])->name('customer.rental.kembalikan');
     Route::get('/rental/{id}/Pembayaran-Denda', [RentalController::class, 'PembayaranDenda'])->name('customer.rental.denda');
     Route::get('/orders/{id}/payment', [RentalController::class, 'paymentPage'])->name('customer.orders.payment');
+    Route::post('/rental/{rental}/pay-cash', [RentalController::class, 'payCash'])->name('customer.rental.pay-cash');
+
+    Route::get('/payment/success/{id}', [RentalController::class, 'paymentSuccess'])->name('payment.success');
+    Route::get('/payment/failed/{id}', [RentalController::class, 'paymentFailed'])->name('payment.failed');
 
     // CUSTOMER FEATURE GATE
     Route::middleware(['can:access-customer-features'])->group(function () {
@@ -60,4 +66,4 @@ Route::middleware('auth')->group(function () {
     })->where('path', '.*')->middleware('auth')->name('media.show');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

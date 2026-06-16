@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Motor;
+use App\Models\Perlengkapan;
 use Illuminate\Http\Request;
 
 class MotorController extends Controller
@@ -36,7 +37,9 @@ class MotorController extends Controller
     {
         $motor = Motor::with(['specification', 'category'])->where('id', $id)->firstOrFail();
 
+        $listPerlengkapan = Perlengkapan::where('stok', '>', 0)->get();
+
         $rekomendasiMotors = Motor::where('status', 'Tersedia')->where('id', '!=', $motor->id)->inRandomOrder()->take(8)->get();
-        return view('detail-motor', compact('motor', 'rekomendasiMotors'));
+        return view('detail-motor', compact('motor', 'rekomendasiMotors', 'listPerlengkapan'));
     }
 }

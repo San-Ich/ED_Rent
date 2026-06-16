@@ -5,9 +5,12 @@ namespace App\Filament\Resources\Rentals\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
 
 class RentalsTable
 {
@@ -23,6 +26,9 @@ class RentalsTable
                     ->sortable(),
                 TextColumn::make('kode_booking')
                     ->sortable(),
+                TextColumn::make('perlengkapan.nama_perlengkapan')
+                    ->label('Perlengkapan Tambahan')
+                    ->placeholder('Tidak ada tambahan'),
                 TextColumn::make('tanggal_mulai')
                     ->date()
                     ->sortable(),
@@ -42,24 +48,24 @@ class RentalsTable
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
-                ->color(fn(string $state): string => match ($state) {
-                    'Selesai'  => 'success',
-                    'Disewa'   => 'info',
-                    'Menunggu' => 'warning',
-                    'Gagal'    => 'danger',
-                    'Pending Data' => 'danger',
-                    'Menunggu Verifikasi' => 'primary',
-                    default    => 'gray',
-                })
-                ->icon(fn(string $state): string => match ($state) {
-                    'Selesai'  => 'heroicon-m-check-badge', 
-                    'Disewa'   => 'heroicon-m-arrow-path', 
-                    'Menunggu' => 'heroicon-m-clock',
-                    'Gagal'    => 'heroicon-m-exclamation-circle',
-                    'Pending Denda' => 'heroicon-m-exclamation-triangle',
-                    'Menunggu Verifikasi' => 'heroicon-m-clipboard-document-check',
-                    default    => 'heroicon-m-question-mark-circle',
-                })
+                    ->color(fn(string $state): string => match ($state) {
+                        'Selesai'  => 'success',
+                        'Disewa'   => 'info',
+                        'Menunggu' => 'warning',
+                        'Gagal'    => 'danger',
+                        'Pending Data' => 'danger',
+                        'Menunggu Verifikasi' => 'primary',
+                        default    => 'gray',
+                    })
+                    ->icon(fn(string $state): string => match ($state) {
+                        'Selesai'  => 'heroicon-m-check-badge',
+                        'Disewa'   => 'heroicon-m-arrow-path',
+                        'Menunggu' => 'heroicon-m-clock',
+                        'Gagal'    => 'heroicon-m-exclamation-circle',
+                        'Pending Denda' => 'heroicon-m-exclamation-triangle',
+                        'Menunggu Verifikasi' => 'heroicon-m-clipboard-document-check',
+                        default    => 'heroicon-m-question-mark-circle',
+                    })
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()

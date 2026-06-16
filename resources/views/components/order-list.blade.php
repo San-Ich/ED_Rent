@@ -31,6 +31,22 @@
                                 </span>
                                 <h4 class="fw-bold text-carbon mb-0 mt-1">
                                     {{ $order->motor->model ?? $order->motor_name }}</h4>
+                                <div class="mt-2">
+                                    @if ($order->metode_pengantaran === 'delivery')
+                                        <span class="badge bg-info text-dark small px-2 py-1">
+                                            <i class="bi bi-truck me-1"></i> Antar-Jemput (Delivery)
+                                        </span>
+                                        <small class="text-muted d-block mt-1 bg-light p-2 rounded border"
+                                            style="font-size: 0.8rem;">
+                                            <i class="bi bi-geo-alt me-1"></i> <strong>Alamat:</strong>
+                                            {{ $order->alamat_pengantaran }}
+                                        </small>
+                                    @else
+                                        <span class="badge bg-secondary text-white small px-2 py-1">
+                                            <i class="bi bi-geo me-1"></i> Ambil Sendiri di Garasi Pusat
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                             <div>
                                 @if ($order->status == 'Menunggu')
@@ -116,7 +132,7 @@
                                 </a>
 
                                 <button type="button" class="btn btn-outline-secondary btn-md rounded-pill px-3"
-                                    onclick="showOrderDetail('{{ $order->id }}', '{{ $order->kode_booking }}', '{{ $order->motor->model ?? $order->motor_name }}', '{{ \Carbon\Carbon::parse($order->tanggal_mulai)->translatedFormat('d M Y (H:i)') }}', '{{ \Carbon\Carbon::parse($order->tanggal_rencana_kembali)->translatedFormat('d M Y (H:i)') }}', 'Rp {{ number_format($order->total_harga, 0, ',', '.') }}', '{{ $order->status }}', '{{ $order->motor && $order->motor->image ? asset('storage/' . $order->motor->image) : '' }}', '{{ $order->payment_proof ? 1 : 0 }}')">
+                                    onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
                             @elseif($order->status === 'active' || $order->status === 'Disewa')
@@ -125,19 +141,23 @@
                                     <i class="bi bi-download me-1"></i> Struk
                                 </a>
 
-                                @if (\Carbon\Carbon::parse($order->tanggal_rencana_kembali)->subHours(2)->isPast())
-                                    <form action="{{ route('customer.rental.kembalikan', $order->id) }}" method="POST"
-                                        class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-primary btn-sm rounded-pill"
-                                            onclick="return confirm('Apakah Anda yakin ingin mengonfirmasi pengembalian motor saat ini?')">
-                                            <i class="bi bi-arrow-left-right me-1"></i> Kembalikan Motor
-                                        </button>
-                                    </form>
+                                @php
+                                    $hariIni = \Carbon\Carbon::now('Asia/Jakarta')->startOfDay();
+                                    $hariTerakhirSewa = \Carbon\Carbon::parse(
+                                        $order->tanggal_rencana_kembali,
+                                        'Asia/Jakarta',
+                                    )->startOfDay();
+                                @endphp
+
+                                @if ($hariIni->greaterThanOrEqualTo($hariTerakhirSewa))
+                                    <button type="button" class="btn btn-primary btn-sm rounded-pill"
+                                        data-bs-toggle="modal" data-bs-target="#modalKembalikan{{ $order->id }}">
+                                        <i class="bi bi-arrow-left-right me-1"></i> Kembalikan Motor
+                                    </button>
                                 @endif
 
                                 <button type="button" class="btn btn-outline-primary btn-md rounded-pill px-3"
-                                    onclick="showOrderDetail('{{ $order->id }}', '{{ $order->kode_booking }}', '{{ $order->motor->model ?? $order->motor_name }}', '{{ \Carbon\Carbon::parse($order->tanggal_mulai)->translatedFormat('d M Y (H:i)') }}', '{{ \Carbon\Carbon::parse($order->tanggal_rencana_kembali)->translatedFormat('d M Y (H:i)') }}', 'Rp {{ number_format($order->total_harga, 0, ',', '.') }}', '{{ $order->status }}', '{{ $order->motor && $order->motor->image ? asset('storage/' . $order->motor->image) : '' }}', '{{ $order->payment_proof ? 1 : 0 }}')">
+                                    onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
                             @elseif($order->status === 'Pending Denda')
@@ -147,7 +167,7 @@
                                 </a>
 
                                 <button type="button" class="btn btn-outline-secondary btn-md rounded-pill px-3"
-                                    onclick="showOrderDetail('{{ $order->id }}', '{{ $order->kode_booking }}', '{{ $order->motor->model ?? $order->motor_name }}', '{{ \Carbon\Carbon::parse($order->tanggal_mulai)->translatedFormat('d M Y (H:i)') }}', '{{ \Carbon\Carbon::parse($order->tanggal_rencana_kembali)->translatedFormat('d M Y (H:i)') }}', 'Rp {{ number_format($order->total_harga, 0, ',', '.') }}', '{{ $order->status }}', '{{ $order->motor && $order->motor->image ? asset('storage/' . $order->motor->image) : '' }}', '{{ $order->payment_proof ? 1 : 0 }}')">
+                                    onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
                             @elseif($order->status === 'Menunggu Verifikasi')
@@ -157,19 +177,38 @@
                                 </button>
 
                                 <button type="button" class="btn btn-outline-secondary btn-md rounded-pill px-3"
-                                    onclick="showOrderDetail('{{ $order->id }}', '{{ $order->kode_booking }}', '{{ $order->motor->model ?? $order->motor_name }}', '{{ \Carbon\Carbon::parse($order->tanggal_mulai)->translatedFormat('d M Y (H:i)') }}', '{{ \Carbon\Carbon::parse($order->tanggal_rencana_kembali)->translatedFormat('d M Y (H:i)') }}', 'Rp {{ number_format($order->total_harga, 0, ',', '.') }}', '{{ $order->status }}', '{{ $order->motor && $order->motor->image ? asset('storage/' . $order->motor->image) : '' }}', '{{ $order->payment_proof ? 1 : 0 }}')">
+                                    onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
                             @elseif($order->status === 'failed' || $order->status === 'Gagal')
-                                <a href="{{ route('catalog.show', $order->id) }}"
-                                    class="btn btn-danger btn-md rounded-pill text-white px-4 border-0 shadow-sm">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Sewa Ulang
-                                </a>
-                            @else
-                                <button type="button" class="btn btn-outline-secondary btn-md rounded-pill px-4"
-                                    onclick="showOrderDetail('{{ $order->id }}', '{{ $order->kode_booking }}', '{{ $order->motor->model ?? $order->motor_name }}', '{{ \Carbon\Carbon::parse($order->tanggal_mulai)->translatedFormat('d M Y (H:i)') }}', '{{ \Carbon\Carbon::parse($order->tanggal_rencana_kembali)->translatedFormat('d M Y (H:i)') }}', 'Rp {{ number_format($order->total_harga, 0, ',', '.') }}', '{{ $order->status }}', '{{ $order->motor && $order->motor->image ? asset('storage/' . $order->motor->image) : '' }}', '{{ $order->payment_proof ? 1 : 0 }}')">
-                                    <i class="bi bi-file-earmark-text me-1"></i> Riwayat
-                                </button>
+                                <div class="d-flex flex-column align-items-center align-items-md-end gap-2">
+                                    <span class="text-danger mb-1 d-block" style="font-size: 0.75rem; opacity: 0.85;">
+                                        <i class="bi bi-exclamation-circle me-1"></i> Waktu pembayaran habis /
+                                        dibatalkan
+                                    </span>
+
+                                    <div class="d-flex gap-2">
+                                        @if ($order->motor_id)
+                                            <a href="{{ route('catalog.show', $order->motor_id) }}"
+                                                class="btn btn-danger btn-md rounded-pill text-white px-4 border-0 shadow-sm transition-all fw-bold"
+                                                style="font-size: 0.85rem;">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i> Sewa Ulang Unit Ini
+                                            </a>
+                                        @else
+                                            <a href="{{ url('/catalog') }}"
+                                                class="btn btn-secondary btn-md rounded-pill text-white px-4 border-0 shadow-sm"
+                                                style="font-size: 0.85rem;">
+                                                <i class="bi bi-search me-1"></i> Cari Motor Lain
+                                            </a>
+                                        @endif
+
+                                        <button type="button"
+                                            class="btn btn-outline-secondary btn-md rounded-pill px-3"
+                                            onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             @endif
 
                         </div>
@@ -181,14 +220,124 @@
                 <i class="bi bi-receipt display-2 text-muted"></i>
                 <h4 class="fw-bold text-carbon mt-3">Tidak Ada Pesanan</h4>
                 <p class="text-secondary">Saat ini tidak ada riwayat pesanan sewa motor.</p>
-                <a href="{{ url('/catalog') }}" class="btn btn-carbon rounded-pill px-4 mt-2 text-decoration-none">Sewa
+                <a href="{{ url('/catalog') }}"
+                    class="btn btn-carbon rounded-pill px-4 mt-2 text-decoration-none">Sewa
                     Motor Sekarang</a>
             </div>
         @endforelse
+
+        @foreach ($orders as $order)
+            @if ($order->status === 'active' || $order->status === 'Disewa')
+                <div class="modal fade" id="modalKembalikan{{ $order->id }}" tabindex="-1" aria-hidden="true"
+                    style="white-space: normal;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content rounded-4 border-0 shadow text-start">
+                            <div class="modal-header bg-dark text-white p-3">
+                                <h5 class="modal-title fw-bold fs-6"><i
+                                        class="bi bi-box-arrow-in-left me-2"></i>Konfirmasi Pengembalian</h5>
+                                <button type="button" class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <form action="{{ route('customer.rental.kembalikan', $order->id) }}" method="POST"
+                                enctype="multipart/form-data">
+                                @csrf
+                                <div class="modal-body p-4 text-secondary" style="font-size: 0.9rem;">
+
+                                    @if ($order->metode_pengantaran === 'delivery')
+                                        <div class="alert alert-info border-0 rounded-3 p-3 mb-3 d-flex gap-2">
+                                            <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                                            <div>
+                                                <span class="fw-bold text-dark d-block mb-1">Layanan Antar-Jemput
+                                                    Aktif</span>
+                                                Staf kami akan menjemput motor ke lokasi Anda. Silakan tentukan opsi
+                                                kehadiran Anda di bawah ini.
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold small text-dark">Bagaimana Anda Ingin
+                                                Mengembalikan Motor?</label>
+                                            <select class="form-select rounded-3" name="opsi_kehadiran"
+                                                onchange="toggleSkenarioKembali(this, '{{ $order->id }}')">
+                                                <option value="menunggu">🤝 Serah Terima Langsung (Saya akan menunggu
+                                                    staf di lokasi)</option>
+                                                <option value="titip">⚡ Contactless / Buru-buru (Motor akan saya
+                                                    titipkan / parkir)</option>
+                                            </select>
+                                        </div>
+
+                                        <div id="formContactless{{ $order->id }}"
+                                            class="d-none border rounded-3 p-3 bg-light mb-3">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-dark">Di Kita Kunci & STNK
+                                                    Ditinggalkan?</label>
+                                                <input type="text" class="form-control rounded-3"
+                                                    name="posisi_kunci"
+                                                    placeholder="Contoh: Dititip ke Resepsionis Hotel / Di dalam dasbor motor">
+                                            </div>
+                                            <div class="mb-0">
+                                                <label class="form-label small fw-bold text-dark">Foto Posisi Kendaraan
+                                                    Parkir</label>
+                                                <input type="file" class="form-control rounded-3"
+                                                    name="foto_bukti" accept="image/*">
+                                                <small class="text-muted d-block mt-1">Unggah foto parkir unit untuk
+                                                    mempercepat staf kami mengidentifikasi lokasi.</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-0">
+                                            <label class="form-label fw-bold small text-dark">Konfirmasi / Perubahan
+                                                Alamat Jemput</label>
+                                            <textarea class="form-control rounded-3" name="alamat_jemput_final" rows="2"
+                                                placeholder="Tulis alamat detail jika ada pergeseran lokasi penjemputan...">{{ $order->alamat_pengantaran }}</textarea>
+                                        </div>
+                                    @else
+                                        <div class="text-center py-2">
+                                            <i class="bi bi-shop display-6 text-muted mb-2 d-block"></i>
+                                            <p class="mb-0">
+                                                Anda memilih metode <strong>Ambil Sendiri</strong> pada awal sewa.
+                                                Silakan bawa kembali unit motor beserta helm dan STNK langsung ke
+                                                <strong>Garasi Utama Kuda Besi</strong>.
+                                            </p>
+                                        </div>
+                                    @endif
+
+                                </div>
+                                <div class="modal-footer bg-light p-3 border-top d-flex gap-2 justify-content-end">
+                                    <button type="button"
+                                        class="btn btn-light rounded-pill px-4 text-secondary small border"
+                                        data-bs-dismiss="modal">Batal</button>
+                                    <button type="submit" class="btn btn-dark rounded-pill px-4 small">Konfirmasi
+                                        Selesai</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endforeach
+
         <div class="d-flex justify-content-center custom-pagination mt-5">
             {{ $orders->links('pagination::bootstrap-5') }}
         </div>
     </div>
+
+
+
 </main>
 
 <x-modal-orderList />
+
+
+
+<script>
+    function toggleSkenarioKembali(selectElement, orderId) {
+        const formContactless = document.getElementById('formContactless' + orderId);
+        if (selectElement.value === 'titip') {
+            formContactless.classList.remove('d-none');
+        } else {
+            formContactless.classList.add('d-none');
+        }
+    }
+</script>

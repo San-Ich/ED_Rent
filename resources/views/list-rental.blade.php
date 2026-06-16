@@ -10,4 +10,5 @@
 @endsection
 
 @vite(["resources/js/list-rental.js"])
+@vite(["resources/js/order-modal.js"])
 
