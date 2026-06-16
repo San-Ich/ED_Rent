@@ -183,8 +183,7 @@
                             @elseif($order->status === 'failed' || $order->status === 'Gagal')
                                 <div class="d-flex flex-column align-items-center align-items-md-end gap-2">
                                     <span class="text-danger mb-1 d-block" style="font-size: 0.75rem; opacity: 0.85;">
-                                        <i class="bi bi-exclamation-circle me-1"></i> Waktu pembayaran habis /
-                                        dibatalkan
+                                        <i class="bi bi-exclamation-circle me-1"></i> Motor sudah disewa
                                     </span>
 
                                     <div class="d-flex gap-2">

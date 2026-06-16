@@ -42,6 +42,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/payment/success/{id}', [RentalController::class, 'paymentSuccess'])->name('payment.success');
     Route::get('/payment/failed/{id}', [RentalController::class, 'paymentFailed'])->name('payment.failed');
+    Route::match(['get', 'post'], '/payment-failed-direct', [RentalController::class, 'handleDirectFailed'])->name('payment.failed.direct');
+
 
     // CUSTOMER FEATURE GATE
     Route::middleware(['can:access-customer-features'])->group(function () {

@@ -177,7 +177,7 @@ class RentalController extends Controller
             \Midtrans\Config::$is3ds = true;
 
             $duration = 1;
-            $unit = 'hour';
+            $unit = 'minute';
 
             $params = [
                 'transaction_details' => [
@@ -187,6 +187,7 @@ class RentalController extends Controller
                 'customer_details' => [
                     'first_name' => $rental->user->name,
                     'email' => $rental->user->email,
+                    'phone' => $rental->user->phone ?? '', // Tambahan opsional pelengkap data customer
                 ],
                 'item_details' => [
                     [
@@ -200,13 +201,19 @@ class RentalController extends Controller
                     'start_time' => date("Y-m-d H:i:s O"),
                     'duration' => $duration,
                     'unit' => $unit
+                ],
+                // 🌟 KUNCI UTAMA FIX: Memaksa server Midtrans mengirim user balik ke web Anda saat Expired
+                'callbacks' => [
+                    'finish' => route('payment.success', $rental->id),
+                    'unfinish' => route('customer.orders'),
+                    'error' => route('payment.failed', $rental->id) // Menghancurkan 'example.com' selamanya
                 ]
             ];
 
             $snapToken = \Midtrans\Snap::getSnapToken($params);
 
             $rental->snap_token = $snapToken;
-            $rental->payment_expired_at = \Carbon\Carbon::now()->addHours($duration);
+            $rental->payment_expired_at = \Carbon\Carbon::now()->addMinute($duration);
             $rental->save();
         }
 
@@ -462,5 +469,22 @@ class RentalController extends Controller
         $rental = Rental::where('user_id', Auth::id())->findOrFail($id);
 
         return view('payment-failed', compact('rental'));
+    }
+
+    public function handleDirectFailed()
+    {
+        // Cari transaksi terakhir milik user yang sedang login yang statusnya belum selesai/gagal
+        $latestRental = Rental::where('user_id', Auth::id())
+            ->latest()
+            ->first();
+
+        if ($latestRental) {
+            // Jika ketemu, lempar (redirect) ke halaman paymentFailed yang asli dengan membawa ID-nya
+            return redirect()->route('payment.failed', $latestRental->id);
+        }
+
+        // Jika tidak ada data transaksi sama sekali, lempar ke dashboard / riwayat pesanan utama
+        return redirect()->route('customer.orders.index')
+            ->with('error', 'Waktu pembayaran online Anda telah habis.');
     }
 }

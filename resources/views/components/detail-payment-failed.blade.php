@@ -1,33 +1,72 @@
-<div class="container py-5 text-center">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-0 shadow rounded-4 p-5 bg-white">
-                <div class="mb-4 text-danger">
-                    <i class="bi bi-x-circle-fill display-1"></i>
-                </div>
-                <h2 class="fw-bold text-dark mb-2">Pembayaran Gagal</h2>
-                <p class="text-secondary mb-4">Mohon maaf, transaksi Anda dibatalkan atau gagal diproses oleh sistem keuangan.</p>
-                
-                <div class="bg-light rounded-3 p-3 text-start mb-4" style="font-size: 0.9rem;">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Kode Booking:</span>
-                        <span class="fw-bold text-dark">{{ $rental->kode_booking }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">Kendala:</span>
-                        <span class="fw-bold text-danger">Sesi Berakhir / Batalkan Manual</span>
-                    </div>
-                </div>
+<div class="container min-vh-100 d-flex align-items-center justify-content-center bg-white">
 
-                <div class="d-grid gap-2">
-                    <a href="{{ url('/payment/' . $rental->id) }}" class="btn btn-danger btn-md rounded-pill fw-bold">
-                        <i class="bi bi-arrow-clockwise me-2"></i> Coba Bayar Lagi
-                    </a>
-                    <a href="{{ route('customer.orders') }}" class="btn btn-outline-secondary btn-md rounded-pill">
-                        Kembali ke Dashboard
-                    </a>
-                </div>
-            </div>
+    <div class="card border-light-subtle rounded-0 p-4 p-sm-5 text-center shadow-sm"
+        style="max-width: 450px; width: 100%;">
+
+
+
+        <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4"
+            style="width: 70px; height: 70px; font-size: 28px;">
+
+            <i class="bi bi-x-lg"></i>
+
         </div>
+
+
+
+        <h3 class="fw-bold text-black mb-2" style="letter-spacing: -0.5px;">Waktu Pembayaran Habis</h3>
+
+        <p class="text-muted small mb-4 lh-base">
+
+            Batas durasi transaksi online Anda pada sistem Midtrans telah kedaluwarsa atau dibatalkan. Jangan khawatir,
+            dana Anda tidak terpotong.
+
+        </p>
+
+
+
+        <div class="bg-light p-3 mb-4 rounded-3 text-start small">
+
+            <div class="d-flex justify-content-between mb-2">
+
+                <span class="text-secondary">Kode Transaksi</span>
+
+                <span class="fw-bold text-dark">{{ $rental->kode_booking }}</span>
+
+            </div>
+
+            <div class="d-flex justify-content-between">
+
+                <span class="text-secondary">Unit Kendaraan</span>
+
+                <span class="fw-semibold text-dark">{{ $rental->motor->model }}</span>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="d-grid gap-2">
+
+            <a href="{{ route('customer.orders.payment', $rental->id) }}"
+                class="btn btn-dark rounded-pill py-2.5 fw-semibold shadow-sm border-0">
+
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Coba Bayar Ulang
+
+            </a>
+
+
+
+            <a href="{{ route('customer.orders') }}"
+                class="btn btn-outline-dark rounded-pill py-2.5 fw-semibold border-light-subtle text-dark">
+
+                Kembali ke Riwayat Pesanan
+
+            </a>
+
+        </div>
+
     </div>
+
 </div>
