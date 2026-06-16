@@ -6,6 +6,7 @@ use App\Models\Motor;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Content;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,7 +16,6 @@ class RentalForm
 {
     public static function configure($schema)
     {
-
         return $schema
             ->columns(3)
             ->components([
@@ -92,7 +92,20 @@ class RentalForm
                     ->disabled()
                     ->dehydrated()
                     ->required()
-                    ->unique(ignoreRecord: true),
+                    ->unique(ignoreRecord: true)
+                    ->columnSpan(3),
+
+                TextInput::make('perlengkapan_tambahan')
+                    ->label('Keterangan Perlengkapan Tambahan :')
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->formatStateUsing(function ($record) {
+                        if ($record && $record->perlengkapan) {
+                            return $record->perlengkapan->pluck('nama_perlengkapan')->join(', ');
+                        }
+                        return 'Tidak ada perlengkapan tambahan yang dipilih.';
+                    })
+                    ->columnSpan(3),
             ]);
     }
 

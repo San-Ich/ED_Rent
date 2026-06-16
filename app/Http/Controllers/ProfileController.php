@@ -12,16 +12,16 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
 {
 
     public function index()
     {
-        // Mengambil data user yang sedang login saat ini
         $user = Auth::user();
 
-        // 🌟 Arahkan ke nama file view kamu (misal: detail-profile.blade.php)
         return view('profile', compact('user'));
     }
     /**
@@ -101,5 +101,53 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    public function requestVerification()
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        if (empty($user->phone) || empty($user->address) || empty($user->ktp_path) || empty($user->sim_path)) {
+
+            $missing = [];
+            if (empty($user->phone)) $missing[] = "Nomor WhatsApp";
+            if (empty($user->address)) $missing[] = "Alamat";
+            if (empty($user->ktp_path)) $missing[] = "Foto KTP";
+            if (empty($user->sim_path)) $missing[] = "Foto SIM";
+
+            $pesanError = "Gagal mengajukan verifikasi. Harap lengkapi data berikut terlebih dahulu: " . implode(', ', $missing) . ".";
+
+            return redirect()->back()->with('error', $pesanError);
+        }
+
+        $user->catatan_verifikasi = null;
+        $user->save();
+
+        $tokenFonnte = 'vC36PX9CRHcWUgffxgtz';
+        $nomorWAAdmin = '082146724109';
+
+        $pesan = "🚨 *KUDA BESI RENT - PERMINTAAN VERIFIKASI* 🚨\n\n";
+        $pesan .= "Halo Admin, pelanggan berikut telah mengajukan verifikasi akun dan selesai melengkapi dokumen:\n\n";
+        $pesan .= "👤 *Nama:* " . $user->name . "\n";
+        $pesan .= "✉️ *Email:* " . $user->email . "\n";
+        $pesan .= "📱 *No. HP:* " . $user->phone . "\n\n";
+        $pesan .= "Silakan buka Dashboard Admin *Filament* untuk memeriksa foto KTP/SIM dan menentukan status verifikasinya. Terima kasih!";
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => $tokenFonnte,
+            ])->asForm()->post('https://api.fonnte.com/send', [
+                'target' => $nomorWAAdmin,
+                'message' => $pesan,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Fonnte Error: ' . $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Permintaan verifikasi telah dikirim! Admin Kuda Besi Rent akan segera memeriksa dokumen Anda.');
     }
 }

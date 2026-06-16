@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Motor;
+use App\Models\Perlengkapan;
 use App\Models\Rental;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
 
@@ -47,7 +50,7 @@ class RentalController extends Controller
 
     public function checkout(Motor $motor)
     {
-        if ($motor->status !== 'tersedia') {
+        if ($motor->status !== 'Tersedia') {
             return redirect()->back()->with('error', 'Motor ini sedang tidak tersedia.');
         }
 
@@ -73,14 +76,26 @@ class RentalController extends Controller
                 ->with('error', "Batas sewa tercapai. Kamu hanya diperbolehkan menyewa maksimal {$user->rental_limit} motor secara bersamaan.");
         }
 
+        // Validasi Request
         $request->validate([
             'motor_id'                => 'required|exists:motors,id',
             'tanggal_mulai'           => 'required',
             'tanggal_rencana_kembali' => 'required',
+            'total_harga'             => 'required|numeric',
         ]);
 
-        $motor = Motor::findOrFail($request->motor_id);
+        if (!empty($request->input('perlengkapan_ids'))) {
+            foreach ($request->input('perlengkapan_ids') as $idPerlengkapan) {
+                $perlengkapan = \App\Models\Perlengkapan::find($idPerlengkapan);
 
+                if ($perlengkapan && $perlengkapan->stok <= 0) {
+                    return redirect()->back()->with('error', "Maaf, perlengkapan '{$perlengkapan->nama_perlengkapan}' baru saja kehabisan stok!");
+                }
+            }
+        }
+
+        // Cek Ketersediaan Motor
+        $motor = Motor::findOrFail($request->motor_id);
         $isAvailable = Motor::where('id', $request->motor_id)
             ->where('status', 'Tersedia')
             ->exists();
@@ -89,38 +104,39 @@ class RentalController extends Controller
             return redirect()->back()->with('error', 'Maaf, motor baru saja dipesan orang lain!');
         }
 
-        $tglMulai   = str_replace('T', ' ', $request->tanggal_mulai);
-        $tglKembali = str_replace('T', ' ', $request->tanggal_rencana_kembali);
+        $tglMulai   = Carbon::parse($request->tanggal_mulai)->format('Y-m-d H:i:s');
+        $tglKembali = Carbon::parse($request->tanggal_rencana_kembali)->format('Y-m-d H:i:s');
 
-        $start  = Carbon::parse($tglMulai);
-        $end    = Carbon::parse($tglKembali);
-        $durasi = $start->diffInDays($end) ?: 1;
+        $kodeBooking = 'KBB-' . date('Ymd') . '-' . strtoupper(Str::random(5));
 
-        $totalHarga = $durasi * $motor->harga_per_hari;
+        $hargaFinalYangDisimpan = $request->total_harga;
 
-        if ($request->metode_pengantaran === 'delivery') {
-            $totalHarga += 75000;
-        }
-
-        $kodeBooking = 'KBB-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(5));
-
-        // SIMPAN DATA KE DATABASE
         $rental = Rental::create([
             'user_id'                 => Auth::id(),
             'motor_id'                => $motor->id,
             'kode_booking'            => $kodeBooking,
             'tanggal_mulai'           => $tglMulai,
             'tanggal_rencana_kembali' => $tglKembali,
-            'total_harga'             => $totalHarga,
+            'total_harga'             => $hargaFinalYangDisimpan,
             'penalty'                 => 0,
             'status'                  => 'Menunggu',
             'payment_proof'           => null,
-            // 'alamat_pengantaran'   => $request->alamat_pengantaran,
+            'metode_pengantaran'      => $request->metode_pengantaran,
+            'alamat_pengantaran'      => $request->metode_pengantaran === 'delivery' ? $request->alamat_pengantaran_final : null,
         ]);
 
-        //
+        $perlengkapanDipilih = $request->input('perlengkapan_ids');
+
+        if (!empty($perlengkapanDipilih)) {
+            $rental->perlengkapan()->attach($perlengkapanDipilih);
+
+            foreach ($perlengkapanDipilih as $idPerlengkapan) {
+                Perlengkapan::where('id', $idPerlengkapan)->decrement('stok', 1);
+            }
+        }
+
         return redirect()->route('customer.orders')
-            ->with('success', "Booking motor {$rental->motor->model} berhasil! Silakan cek daftarnya di sini.");
+            ->with('success', "Booking motor {$motor->model} berhasil dibuat dengan total Rp " . number_format($hargaFinalYangDisimpan, 0, ',', '.'));
     }
 
     public function paymentPage($id)
@@ -131,32 +147,68 @@ class RentalController extends Controller
             return redirect()->route('customer.orders')->with('error', 'Transaksi ini tidak membutuhkan pembayaran.');
         }
 
-        // Konfigurasi Midtrans
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$isProduction = env('MIDTRANS_IS_PRODUCTION') === 'true';
-        Config::$isSanitized = true;
-        Config::$is3ds = true;
+        $isMotorTaken = Rental::where('motor_id', $rental->motor_id)
+            ->where('status', 'Disewa')
+            ->where(function ($query) use ($rental) {
+                $query->whereBetween('tanggal_mulai', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
+                    ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
+                    ->orWhere(function ($q) use ($rental) {
+                        $q->where('tanggal_mulai', '<=', $rental->tanggal_mulai)
+                            ->where('tanggal_rencana_kembali', '>=', $rental->tanggal_rencana_kembali);
+                    });
+            })
+            ->exists();
 
-        $params = [
-            'transaction_details' => [
-                'order_id' => $rental->kode_booking . '-' . time(),
-                'gross_amount' => (int) $rental->total_harga,
-            ],
-            'customer_details' => [
-                'first_name' => $rental->user->name,
-                'email' => $rental->user->email,
-            ],
-            'item_details' => [
-                [
-                    'id' => $rental->motor_id,
-                    'price' => (int) $rental->total_harga,
-                    'quantity' => 1,
-                    'name' => 'Sewa ' . $rental->motor->brand . ' ' . $rental->motor->model,
+        if ($isMotorTaken) {
+            $rental->update(['status' => 'Gagal']);
+
+            return redirect()->route('payment.failed', $rental->id)
+                ->with('error', 'Maaf, unit motor ini baru saja didahului oleh penyewa lain yang membayar lebih cepat!');
+        }
+
+        $waktuSekarang = Carbon::now();
+
+        if ($rental->snap_token && $rental->payment_expired_at && $waktuSekarang->lessThan($rental->payment_expired_at)) {
+            $snapToken = $rental->snap_token;
+        } else {
+            \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+            \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION') === 'true';
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
+
+            $duration = 1;
+            $unit = 'hour';
+
+            $params = [
+                'transaction_details' => [
+                    'order_id' => $rental->kode_booking . '-' . time(),
+                    'gross_amount' => (int) $rental->total_harga,
+                ],
+                'customer_details' => [
+                    'first_name' => $rental->user->name,
+                    'email' => $rental->user->email,
+                ],
+                'item_details' => [
+                    [
+                        'id' => $rental->motor_id,
+                        'price' => (int) $rental->total_harga,
+                        'quantity' => 1,
+                        'name' => 'Sewa ' . $rental->motor->brand . ' ' . $rental->motor->model,
+                    ]
+                ],
+                'expiry' => [
+                    'start_time' => date("Y-m-d H:i:s O"),
+                    'duration' => $duration,
+                    'unit' => $unit
                 ]
-            ]
-        ];
+            ];
 
-        $snapToken = Snap::getSnapToken($params);
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+
+            $rental->snap_token = $snapToken;
+            $rental->payment_expired_at = \Carbon\Carbon::now()->addHours($duration);
+            $rental->save();
+        }
 
         return view('payment', compact('rental', 'snapToken'));
     }
@@ -195,10 +247,6 @@ class RentalController extends Controller
 
         $rental = Rental::where('kode_booking', $actualOrderId)->first();
 
-        if (!$rental) {
-            Log::error('Webhook Gagal: Transaksi tidak ditemukan untuk Kode Booking: ' . $actualOrderId);
-            return response()->json(['message' => 'Transaksi tidak ditemukan'], 404);
-        }
 
         if ($statusMurni == 'capture' || $statusMurni == 'settlement') {
 
@@ -227,9 +275,17 @@ class RentalController extends Controller
         } elseif (in_array($statusMurni, ['deny', 'expire', 'cancel'])) {
 
             if ($isDendaPayment) {
-                Rental::where('id', $rental->id)->update(['status' => 'Pending Denda']);
+                Rental::where('id', $rental->id)->update([
+                    'status' => 'Pending Denda',
+                    'snap_token' => null,
+                    'payment_expired_at' => null
+                ]);
             } else {
-                $rental->update(['status' => 'Gagal']);
+                $rental->update([
+                    'status' => 'Gagal',
+                    'snap_token' => null,
+                    'payment_expired_at' => null
+                ]);
 
                 if ($rental->motor_id) {
                     Motor::where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
@@ -351,5 +407,60 @@ class RentalController extends Controller
             'snapToken' => $snapToken,
             'isDenda'   => true
         ]);
+    }
+
+    public function payCash(Rental $rental)
+    {
+        $rental->update([
+            'status' => 'Menunggu'
+        ]);
+
+        $tokenFonnte = 'vC36PX9CRHcWUgffxgtz';
+        $nomorWAAdmin = '082146724109';
+
+        $pesan = "💵 *KUDA BESI RENT - BOOKING METODE CASH* 💵\n\n";
+        $pesan .= "Halo Admin, pelanggan berikut memilih metode *Bayar Cash di Tempat*:\n\n";
+        $pesan .= "🎟️ *Kode Booking:* " . $rental->kode_booking . "\n";
+        $pesan .= "👤 *Penyewa:* " . $rental->user->name . "\n";
+        $pesan .= "🏍️ *Unit Motor:* " . $rental->motor->brand . " " . $rental->motor->model . "\n";
+        $pesan .= "💰 *Total Tagihan:* Rp " . number_format($rental->total_harga, 0, ',', '.') . "\n\n";
+        $pesan .= "Mohon siapkan unit motor dan tunggu kedatangan penyewa untuk transaksi fisik. Terima kasih!";
+
+        try {
+            Http::withHeaders([
+                'Authorization' => $tokenFonnte,
+            ])->asForm()->post('https://api.fonnte.com/send', [
+                'target' => $nomorWAAdmin,
+                'message' => $pesan,
+            ]);
+        } catch (\Exception $e) {
+        }
+
+        return redirect()->route('customer.orders')->with('success', 'Metode Pembayaran Cash berhasil dipilih! Silakan datang ke garasi sesuai waktu ambil.');
+    }
+
+    public function paymentSuccess($id)
+    {
+        $rental = Rental::where('user_id', Auth::id())->findOrFail($id);
+
+        $rental->update(['status' => 'Disewa']);
+
+        Rental::where('motor_id', $rental->motor_id)
+            ->where('status', 'Menunggu')
+            ->where('id', '!=', $rental->id)
+            ->where(function ($query) use ($rental) {
+                $query->whereBetween('tanggal_mulai', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
+                    ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali]);
+            })
+            ->update(['status' => 'Gagal']); //
+
+        return view('payment-success', compact('rental'));
+    }
+
+    public function paymentFailed($id)
+    {
+        $rental = Rental::where('user_id', Auth::id())->findOrFail($id);
+
+        return view('payment-failed', compact('rental'));
     }
 }

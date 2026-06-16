@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
         $this->call([CategorySeeder::class]);
         $this->call([MotorSpecificationSeeder::class]);
         $this->call([MotorSeeder::class]);
+        $this->call([PerlengkapanSeeder::class]);
         // $this->call([RentalSeeder::class]);
     }
 }

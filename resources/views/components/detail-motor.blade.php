@@ -190,6 +190,16 @@
 </main>
 
 <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+    @if (session('error'))
+        <div class="alert alert-error border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-2"
+            style="background-color: #fdf0f0; color: #651616;">
+            <i class="bi bi-x-circle-fill fs-5"></i>
+            <div>
+                <span class="fw-bold d-block" style="font-size: 0.85rem;">Stok Habis</span>
+                <span style="font-size: 0.8rem; opacity: 0.9;">{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content modal-content-custom border-0 rounded-4 shadow-lg overflow-hidden">
 
@@ -206,6 +216,9 @@
 
             <form id="bookingForm" action="{{ route('booking.store') }}" method="POST">
                 @csrf
+                <input type="hidden" name="total_harga" id="hiddenTotalCost" value="0">
+                <input type="hidden" name="alamat_pengantaran_final" id="hiddenDeliveryAddress" value="">
+
                 <input type="hidden" name="motor_id" value="{{ $motor->id }}">
                 <input type="hidden" id="hargaHarian" value="{{ $motor->harga_per_hari }}">
 
@@ -221,7 +234,7 @@
                                         class="bi bi-calendar2-week me-1"></i> Tanggal & Jam Ambil</label>
                                 <input type="datetime-local" class="form-control rounded-3" id="bookPickupDate"
                                     name="tanggal_mulai" required onchange="calculateTotalCost()"
-                                    min="{{ date('Y-m-d\TH:i') }}">
+                                    min="{{ date('YYYY-MM-DDTHH:MM') }}">
                             </div>
 
                             <div class="mb-3">
@@ -257,43 +270,31 @@
 
                         <div class="col-md-6">
                             <h6 class="fw-bold text-dark text-uppercase mb-3"
-                                style="letter-spacing: 0.5px; color: #0f172a;">3. Perlengkapan Opsional</h6>
+                                style="letter-spacing: 0.5px; color: #0f172a;">
+                                3. Perlengkapan Opsional
+                            </h6>
 
-                            <div class="mb-2">
-                                <input type="checkbox" class="btn-check" id="addonGlove" name="addon_glove"
-                                    value="20000" autocomplete="off" onchange="calculateTotalCost()">
-                                <label class="btn btn-outline-secondary w-100 text-start p-3 rounded-3"
-                                    for="addonGlove" style="border-color: #cbd5e1;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="fw-bold d-block text-dark" style="font-size: 0.9rem;">Sarung
-                                                Tangan Alpinestars</span>
-                                            <span class="text-muted small" style="font-size: 0.75rem;">Proteksi
-                                                handgrip premium harian</span>
+                            @foreach ($listPerlengkapan as $item)
+                                <div class="mb-2">
+                                    <input type="checkbox" class="btn-check addon-checkbox"
+                                        id="addon-{{ $item->id }}" name="perlengkapan_ids[]"
+                                        value="{{ $item->id }}" data-harga="{{ $item->harga_per_hari }}"
+                                        autocomplete="off" onchange="calculateTotalCost()">
+                                    <label class="btn btn-outline-secondary w-100 text-start p-3 rounded-3"
+                                        for="addon-{{ $item->id }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="fw-bold d-block text-dark"
+                                                    style="font-size: 0.9rem;">{{ $item->nama_perlengkapan }}</span>
+                                            </div>
+                                            <span class="text-dark fw-bold small">+Rp
+                                                {{ number_format($item->harga_per_hari, 0, ',', '.') }}<small
+                                                    class="text-muted">/hari</small></span>
                                         </div>
-                                        <span class="text-dark fw-bold small">+Rp 20rb<small
-                                                class="text-muted">/hari</small></span>
-                                    </div>
-                                </label>
-                            </div>
+                                    </label>
+                                </div>
+                            @endforeach
 
-                            <div class="mb-3">
-                                <input type="checkbox" class="btn-check" id="addonActionCam" name="addon_cam"
-                                    value="50000" autocomplete="off" onchange="calculateTotalCost()">
-                                <label class="btn btn-outline-secondary w-100 text-start p-3 rounded-3"
-                                    for="addonActionCam" style="border-color: #cbd5e1;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="fw-bold d-block text-dark" style="font-size: 0.9rem;">Action
-                                                Camera GoPro Hero</span>
-                                            <span class="text-muted small" style="font-size: 0.75rem;">Dokumentasikan
-                                                keseruan petualangan</span>
-                                        </div>
-                                        <span class="text-dark fw-bold small">+Rp 50rb<small
-                                                class="text-muted">/hari</small></span>
-                                    </div>
-                                </label>
-                            </div>
 
                             <div class="rounded-4 p-3 mt-4"
                                 style="background-color: #f8fafc; border: 1px solid #e2e8f0;">

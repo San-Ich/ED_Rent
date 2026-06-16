@@ -12,22 +12,22 @@
 
                     <div class="motor-img-container position-relative overflow-hidden"
                         style="height: 180px; width: 100%;">
+
                         @if ($motor->status === 'Tersedia')
-                            <span
-                                class="badge-status position-absolute top-3 inset-s-3 z-3 bg-success text-white px-2.5 py-1 rounded-pill small fw-bold tracking-wide shadow-sm"
-                                style="font-size: 0.75rem;">
-                                Tersedia
+                            <span class="position-absolute top-0 start-0 m-3 z-3 border shadow-sm"
+                                style="padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background-color: rgba(255, 255, 255, 0.95); color: #0f172a; border-color: rgba(15, 23, 42, 0.1) !important;">
+                                <i class="bi bi-circle-fill me-1 text-success"
+                                    style="font-size: 0.45rem; vertical-align: middle;"></i> Tersedia
                             </span>
                         @elseif ($motor->status === 'Disewa')
-                            <span
-                                class="badge-status position-absolute top-3 inset-s-3 z-3 bg-danger text-white px-2.5 py-1 rounded-pill small fw-bold tracking-wide shadow-sm"
-                                style="font-size: 0.75rem;">
-                                Disewa
+                            <span class="position-absolute top-0 start-0 m-3 z-3 shadow-sm"
+                                style="padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background-color: #0f172a; color: #ffffff;">
+                                <i class="bi bi-circle-fill me-1 text-danger"
+                                    style="font-size: 0.45rem; vertical-align: middle;"></i> Disewa
                             </span>
                         @else
-                            <span
-                                class="badge-status position-absolute top-3 inset-s-3 z-3 bg-secondary text-white px-2.5 py-1 rounded-pill small fw-bold tracking-wide shadow-sm"
-                                style="font-size: 0.75rem;">
+                            <span class="position-absolute top-0 start-0 m-3 z-3 border shadow-sm"
+                                style="padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background-color: #f8fafc; color: #64748b; border-color: #e2e8f0 !important;">
                                 {{ $motor->status }}
                             </span>
                         @endif

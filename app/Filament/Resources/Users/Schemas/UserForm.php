@@ -12,6 +12,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Filament\Forms\Components\Component;
 
 class UserForm
 {
@@ -118,12 +119,25 @@ class UserForm
                             ->previewable(true)
                             ->downloadable(),
 
-                        Toggle::make('is_verified')
-                            ->label('Verifikasi Identitas User')
-                            ->onColor('success')
-                            ->offColor('danger')
-                            ->helperText('Aktifkan jika foto KTP dan SIM di atas sudah diperiksa keasliannya.')
-                            ->columnSpanFull(),
+                        Select::make('is_verified')
+                            ->label('Status Verifikasi Identitas User')
+                            ->options([
+                                1 => 'Disetujui (Verifikasi Sukses)',
+                                0 => 'Ditolak / Belum Diverifikasi',
+                            ])
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state == 1) {
+                                    $set('catatan_verifikasi', null);
+                                }
+                            }),
+                        Textarea::make('catatan_verifikasi')
+                            ->label('Alasan Penolakan / Catatan Perbaikan')
+                            ->placeholder('Contoh: Foto KTP buram, mohon unggah ulang.')
+                            ->helperText('Kosongkan jika user memang baru daftar dan belum mengirim dokumen.')
+                            ->rows(3)
+                            ->visible(fn($get) => $get('is_verified') == 0),
                     ])->columns(2),
             ]);
     }

@@ -19,7 +19,6 @@ class RentalObserver
 
     public function updated(Rental $rental): void
     {
-        // Mengecek apakah kolom status di tabel rentals mengalami perubahan
         if ($rental->isDirty('status')) {
             $motor = $rental->motor;
 
@@ -39,7 +38,6 @@ class RentalObserver
                     break;
 
                 case 'Pending Denda':
-                    // $motor->update(['status' => 'Tersedia']); 
                     break;
             }
         }
@@ -71,30 +69,31 @@ class RentalObserver
 
     public function saving(Rental $rental): void
     {
-        // 1. Ambil data motor untuk tahu harga per harinya
         $motor = $rental->motor;
 
         if ($motor && $rental->tanggal_mulai && $rental->tanggal_rencana_kembali) {
             $start = Carbon::parse($rental->tanggal_mulai);
             $rencana = Carbon::parse($rental->tanggal_rencana_kembali);
 
-            // 2. Hitung Biaya Sewa Dasar
             $durasiSewa = $start->diffInDays($rencana) ?: 1;
             $biayaSewa = $durasiSewa * $motor->harga_per_hari;
 
-            // 3. Hitung Penalty jika sudah dikembalikan
             $penalty = 0;
             if ($rental->tanggal_pengembalian) {
                 $aktual = Carbon::parse($rental->tanggal_pengembalian);
                 if ($aktual->greaterThan($rencana)) {
                     $hariTerlambat = $rencana->diffInDays($aktual);
-                    $penalty = $hariTerlambat * 50000; // Sesuaikan nominal denda kamu
+                    $penalty = $hariTerlambat * 50000;
                 }
             }
 
-            // 4. Masukkan nilai ke objek rental sebelum disimpan
             $rental->penalty = $penalty;
-            $rental->total_harga = $biayaSewa + $penalty;
+
+            if ($rental->total_harga > 0) {
+                $rental->total_harga = $rental->total_harga + $penalty;
+            } else {
+                $rental->total_harga = $biayaSewa + $penalty;
+            }
         }
     }
 }
