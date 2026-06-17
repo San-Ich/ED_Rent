@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('ktp_path')->nullable(); 
             $table->string('sim_path')->nullable();
             $table->boolean('is_verified')->default(false);
+            $table->text('catatan_verifikasi')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

@@ -41,7 +41,8 @@
                                     "{{ route('payment.failed', $rental->id) }}";
                             } else {
                                 alert(
-                                    "Instruksi pembayaran telah dibuat. Silakan selesaikan transaksi Anda.");
+                                    "Instruksi pembayaran telah dibuat. Silakan selesaikan transaksi Anda."
+                                    );
                                 window.top.location.href = "{{ route('customer.orders') }}";
                             }
                         },

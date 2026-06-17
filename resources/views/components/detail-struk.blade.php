@@ -66,7 +66,7 @@
             margin-top: 5px;
         }
 
-        
+
         .divider {
             border-top: 1px solid #18181b;
             margin: 20px 0;
@@ -212,8 +212,10 @@
                     <div>Rencana Kembali: <span
                             class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_rencana_kembali)->translatedFormat('d F Y') }}</span>
                     </div>
-                    <div>Selesai: <span
-                            class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_pengembalian)->translatedFormat('d F Y') }}</span>
+                    <div>Selesai:
+                        <span class="info-value-dark">
+                            {{ $rental->tanggal_pengembalian ? \Carbon\Carbon::parse($rental->tanggal_pengembalian)->translatedFormat('d F Y') : '-' }}
+                        </span>
                     </div>
                     @if ($rental->alamat_pengantaran)
                         <div class="item-subtext" style="max-width: 250px; display: inline-block;">
@@ -229,7 +231,6 @@
         @php
             $tglMulai = \Carbon\Carbon::parse($rental->tanggal_mulai);
             $tglKembali = \Carbon\Carbon::parse($rental->tanggal_rencana_kembali);
-            $tglSelesai = \Carbon\Carbon::parse($rental->tanggal_pengembalian);
             $totalHari = ceil($tglMulai->diffInHours($tglKembali) / 24) ?: 1;
 
             $hargaDasarMotor = $rental->motor->harga_per_hari ?? 0;
@@ -295,12 +296,14 @@
                 @if ($rental->penalty > 0)
                     <tr style="background-color: #fff5f5;">
                         <td>
-                            <div class="item-name text-danger" style="color: #dc3545; font-weight: bold;">Biaya Keterlambatan Pengembalian (Denda 1Hari/1Jam + Rp. 50000)</div>
+                            <div class="item-name text-danger" style="color: #dc3545; font-weight: bold;">Biaya
+                                Keterlambatan Pengembalian (Denda 1Hari/1Jam + Rp. 50000)</div>
                             <div class="item-subtext">Dikalkulasi otomatis sistem pasca-pengembalian</div>
                         </td>
                         <td class="text-right">-</td>
                         <td class="text-right">-</td>
-                        <td class="text-right text-danger" style="color: #dc3545; font-weight: bold;">Rp {{ number_format($rental->penalty, 0, ',', '.') }}</td>
+                        <td class="text-right text-danger" style="color: #dc3545; font-weight: bold;">Rp
+                            {{ number_format($rental->penalty, 0, ',', '.') }}</td>
                     </tr>
                 @endif
             </tbody>
@@ -330,11 +333,12 @@
                 </tr>
             @endif
 
-        
+
             @if ($rental->penalty > 0)
                 <tr>
                     <td style="color: #dc3545; font-weight: 500;">Akumulasi Total Penalty (Denda)</td>
-                    <td class="text-right text-danger" style="color: #dc3545; font-weight: 500;">+ Rp {{ number_format($rental->penalty, 0, ',', '.') }}</td>
+                    <td class="text-right text-danger" style="color: #dc3545; font-weight: 500;">+ Rp
+                        {{ number_format($rental->penalty, 0, ',', '.') }}</td>
                 </tr>
             @endif
 
