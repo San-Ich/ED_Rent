@@ -31,6 +31,7 @@ class RentalObserver
                     $motor->update(['status' => 'Disewa']);
                     break;
 
+                case 'Menunggu Verifikasi':
                 case 'Selesai':
                 case 'Gagal':
                 case 'Batal':
@@ -69,6 +70,10 @@ class RentalObserver
 
     public function saving(Rental $rental): void
     {
+        if ($rental->status === 'Menunggu Verifikasi' || $rental->status === 'Selesai') {
+            return;
+        }
+
         $motor = $rental->motor;
 
         if ($motor && $rental->tanggal_mulai && $rental->tanggal_rencana_kembali) {
@@ -77,6 +82,11 @@ class RentalObserver
 
             $durasiSewa = $start->diffInDays($rencana) ?: 1;
             $biayaSewa = $durasiSewa * $motor->harga_per_hari;
+
+            $hargaPerlengkapan = 0;
+            if ($rental->relationLoaded('perlengkapan') || isset($rental->perlengkapan)) {
+                $hargaPerlengkapan = $rental->perlengkapan->sum('harga_per_hari') * $durasiSewa;
+            }
 
             $penalty = 0;
             if ($rental->tanggal_pengembalian) {
@@ -89,11 +99,7 @@ class RentalObserver
 
             $rental->penalty = $penalty;
 
-            if ($rental->total_harga > 0) {
-                $rental->total_harga = $rental->total_harga + $penalty;
-            } else {
-                $rental->total_harga = $biayaSewa + $penalty;
-            }
+            $rental->total_harga = $biayaSewa + $hargaPerlengkapan + $penalty;
         }
     }
 }

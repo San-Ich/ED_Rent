@@ -1,7 +1,7 @@
 @vite(['resources/css/list-rental.css'])
 
 @extends('layouts.app')
-@section('title', 'KudaBesiRent | Daftar Sewa')
+@section('tittle', 'KudaBesiRent | Daftar Sewa')
 @section('content')
     <x-header-list-rental />
     <x-filter-bar :counts="$counts" />

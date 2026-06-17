@@ -209,8 +209,11 @@
                     <div>Ambil: <span
                             class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_mulai)->translatedFormat('d F Y') }}</span>
                     </div>
-                    <div>Kembali: <span
+                    <div>Rencana Kembali: <span
                             class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_rencana_kembali)->translatedFormat('d F Y') }}</span>
+                    </div>
+                    <div>Selesai: <span
+                            class="info-value-dark">{{ \Carbon\Carbon::parse($rental->tanggal_pengembalian)->translatedFormat('d F Y') }}</span>
                     </div>
                     @if ($rental->alamat_pengantaran)
                         <div class="item-subtext" style="max-width: 250px; display: inline-block;">
@@ -224,15 +227,14 @@
         </table>
 
         @php
-            // Logika hitung durasi hari secara akurat sesuai form booking
             $tglMulai = \Carbon\Carbon::parse($rental->tanggal_mulai);
             $tglKembali = \Carbon\Carbon::parse($rental->tanggal_rencana_kembali);
+            $tglSelesai = \Carbon\Carbon::parse($rental->tanggal_pengembalian);
             $totalHari = ceil($tglMulai->diffInHours($tglKembali) / 24) ?: 1;
 
             $hargaDasarMotor = $rental->motor->harga_per_hari ?? 0;
             $subtotalMotor = $hargaDasarMotor * $totalHari;
 
-            // Cek biaya pengantaran (sesuai data form lama Anda Rp 75.000 jika delivery)
             $biayaAntar = $rental->alamat_pengantaran ? 75000 : 0;
         @endphp
 
@@ -261,7 +263,6 @@
                         @php
                             $hargaItem = $item->harga ?? ($item->pivot->harga_per_hari ?? ($item->data_harga ?? 0));
                             if (!$hargaItem && isset($item->nama_perlengkapan)) {
-                                // Cadangan jika nama relasi memerlukan penyesuaian nilai
                                 $hargaItem = $item->harga_per_hari ?? 0;
                             }
                             $subtotalItem = $hargaItem * $totalHari;
@@ -286,8 +287,20 @@
                             <div class="item-subtext">Pengantaran Langsung ke Alamat Tujuan</div>
                         </td>
                         <td class="text-right">-</td>
-                        <td class="text-right">-</td>
+                        <td class="text-right"></td>
                         <td class="text-right">Rp {{ number_format($biayaAntar, 0, ',', '.') }}</td>
+                    </tr>
+                @endif
+
+                @if ($rental->penalty > 0)
+                    <tr style="background-color: #fff5f5;">
+                        <td>
+                            <div class="item-name text-danger" style="color: #dc3545; font-weight: bold;">Biaya Keterlambatan Pengembalian (Denda 1Hari/1Jam + Rp. 50000)</div>
+                            <div class="item-subtext">Dikalkulasi otomatis sistem pasca-pengembalian</div>
+                        </td>
+                        <td class="text-right">-</td>
+                        <td class="text-right">-</td>
+                        <td class="text-right text-danger" style="color: #dc3545; font-weight: bold;">Rp {{ number_format($rental->penalty, 0, ',', '.') }}</td>
                     </tr>
                 @endif
             </tbody>
@@ -316,6 +329,15 @@
                     <td class="text-right">Rp {{ number_format($biayaAntar, 0, ',', '.') }}</td>
                 </tr>
             @endif
+
+        
+            @if ($rental->penalty > 0)
+                <tr>
+                    <td style="color: #dc3545; font-weight: 500;">Akumulasi Total Penalty (Denda)</td>
+                    <td class="text-right text-danger" style="color: #dc3545; font-weight: 500;">+ Rp {{ number_format($rental->penalty, 0, ',', '.') }}</td>
+                </tr>
+            @endif
+
             <tr class="grand-total">
                 <td>Total Dibayarkan</td>
                 <td class="text-right">Rp {{ number_format($rental->total_harga, 0, ',', '.') }}</td>

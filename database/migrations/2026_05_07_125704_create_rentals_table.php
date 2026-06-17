@@ -21,7 +21,7 @@ return new class extends Migration
             $table->date('tanggal_pengembalian')->nullable();
             $table->integer('total_harga')->default(0);
             $table->integer('penalty')->default(0);
-            $table->enum('status', ['Disewa','Menunggu', 'Selesai', 'Gagal'])->default('Disewa');
+            $table->enum('status', ['Disewa','Menunggu', 'Selesai', 'Gagal', 'Pending Data', 'Menunggu Verifikasi'])->default('Disewa');
             $table->timestamps();
         });
     }

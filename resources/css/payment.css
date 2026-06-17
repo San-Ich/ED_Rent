@@ -1,0 +1,13 @@
+.fw-extrabold {
+    font-weight: 800 !important;
+}
+.last-mb-0:last-child {
+    margin-bottom: 0px !important;
+}
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+.hover-scale:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}

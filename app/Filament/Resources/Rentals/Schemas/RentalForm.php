@@ -3,10 +3,11 @@
 namespace App\Filament\Resources\Rentals\Schemas;
 
 use App\Models\Motor;
+use App\Models\Perlengkapan;
 use Carbon\Carbon;
+use Filament\Forms\Components\Content;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Content;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
@@ -95,16 +96,15 @@ class RentalForm
                     ->unique(ignoreRecord: true)
                     ->columnSpan(3),
 
-                TextInput::make('perlengkapan_tambahan')
-                    ->label('Keterangan Perlengkapan Tambahan :')
-                    ->disabled()
-                    ->dehydrated(false)
-                    ->formatStateUsing(function ($record) {
-                        if ($record && $record->perlengkapan) {
-                            return $record->perlengkapan->pluck('nama_perlengkapan')->join(', ');
-                        }
-                        return 'Tidak ada perlengkapan tambahan yang dipilih.';
-                    })
+                Select::make('perlengkapan')
+                    ->label('Perlengkapan Tambahan')
+                    ->relationship('perlengkapan', 'nama_perlengkapan')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->getOptionLabelFromRecordUsing(fn($record) => "{$record->nama_perlengkapan} (+Rp " . number_format($record->harga_per_hari, 0, ',', '.') . "/hari)")
+                    ->live() 
+                    ->afterStateUpdated(fn($set, $get) => self::calculateTotal($set, $get))
                     ->columnSpan(3),
             ]);
     }
@@ -115,6 +115,7 @@ class RentalForm
         $tglMulai = $get('tanggal_mulai');
         $tglRencanaKembali = $get('tanggal_rencana_kembali');
         $tglKembaliAsli = $get('tanggal_pengembalian');
+        $perlengkapanIds = $get('perlengkapan') ?? [];
 
         if ($motorId && $tglMulai && $tglRencanaKembali) {
             $motor = Motor::find($motorId);
@@ -124,7 +125,14 @@ class RentalForm
             $rencanaKembali = Carbon::parse($tglRencanaKembali);
 
             $durasiSewa = $start->diffInDays($rencanaKembali) ?: 1;
-            $hargaSewa = $durasiSewa * $motor->harga_per_hari;
+
+            $hargaSewaMotor = $durasiSewa * $motor->harga_per_hari;
+
+            $hargaPerlengkapan = 0;
+            if (!empty($perlengkapanIds)) {
+                $totalHargaPerlengkapanPerHari = Perlengkapan::whereIn('id', $perlengkapanIds)->sum('harga_per_hari');
+                $hargaPerlengkapan = $durasiSewa * $totalHargaPerlengkapanPerHari;
+            }
 
             $penalty = 0;
             if ($tglKembaliAsli) {
@@ -136,7 +144,7 @@ class RentalForm
             }
 
             $set('penalty', $penalty);
-            $set('total_harga', $hargaSewa + $penalty);
+            $set('total_harga', $hargaSewaMotor + $hargaPerlengkapan + $penalty);
         }
     }
 }

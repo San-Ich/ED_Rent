@@ -48,7 +48,11 @@ class RentalStats extends StatsOverviewWidget
                 break;
         }
 
-        $totalPendapatan = $pendapatanQuery->sum('total_harga');
+        $totalHargaSewa = $pendapatanQuery->clone()->sum('total_harga');
+
+        $totalPenalty = $pendapatanQuery->clone()->sum('penalty');
+
+        $totalPendapatan = $totalHargaSewa + $totalPenalty;
 
         return [
             Stat::make('Total Pendapatan', 'Rp ' . number_format($totalPendapatan, 0, ',', '.'))

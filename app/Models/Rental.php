@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Rental extends Model
 {
-    protected $fillable = ['user_id', 'motor_id','kode_booking', 'tanggal_mulai', 'tanggal_rencana_kembali', 'tanggal_pengembalian', 'total_harga', 'penalty', 'status', 'metode_pengantaran', 'alamat_pengantaran'];
+    protected $fillable = ['user_id', 'motor_id','kode_booking', 'tanggal_mulai', 'tanggal_rencana_kembali', 'tanggal_pengembalian', 'total_harga', 'penalty', 'status', 'metode_pengantaran', 'alamat_pengantaran', 'cabang_kembali_id', 'foto_serah_terima_cabang',
+        'denda_snap_token',
+        'denda_expired_at'];
     
     public function user()
     {

@@ -124,11 +124,31 @@ class ProfileController extends Controller
             return redirect()->back()->with('error', $pesanError);
         }
 
-        $user->catatan_verifikasi = null;
-        $user->save();
-
         $tokenFonnte = 'vC36PX9CRHcWUgffxgtz';
         $nomorWAAdmin = '082146724109';
+
+        try {
+            $checkDevice = Http::withHeaders([
+                'Authorization' => $tokenFonnte,
+            ])->post('https://api.fonnte.com/device');
+
+            $deviceResult = $checkDevice->json();
+
+            if (!$checkDevice->successful() || !isset($deviceResult['device_status']) || $deviceResult['device_status'] !== 'connect') {
+
+                Log::warning('Verifikasi Gagal: WhatsApp Gateway Fonnte Disconnect/Error.', [
+                    'api_response' => $deviceResult ?? 'No Response'
+                ]);
+
+                return redirect()->back()->with('error', 'Permintaan verifikasi gagal! Sistem WhatsApp Gateway kami sedang dalam pemeliharaan (Disconnect). Mohon mencoba kembali dalam beberapa saat.');
+            }
+        } catch (\Exception $e) {
+            Log::error('Fonnte Connection Timeout/Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal terhubung ke server verifikasi. Silakan coba lagi nanti.');
+        }
+
+        $user->catatan_verifikasi = null;
+        $user->save();
 
         $pesan = "🚨 *KUDA BESI RENT - PERMINTAAN VERIFIKASI* 🚨\n\n";
         $pesan .= "Halo Admin, pelanggan berikut telah mengajukan verifikasi akun dan selesai melengkapi dokumen:\n\n";
@@ -144,6 +164,10 @@ class ProfileController extends Controller
                 'target' => $nomorWAAdmin,
                 'message' => $pesan,
             ]);
+
+            if (!$response->successful()) {
+                Log::error('Fonnte Send Message Failed: ' . $response->body());
+            }
         } catch (\Exception $e) {
             Log::error('Fonnte Error: ' . $e->getMessage());
         }

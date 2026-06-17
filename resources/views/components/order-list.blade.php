@@ -9,6 +9,16 @@
             </div>
         </div>
     @endif
+    @if (session('error'))
+        <div class="alert alert-error border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-2"
+            style="background-color: #fdf0f0; color: #651616;">
+            <i class="bi bi-x-circle-fill fs-5"></i>
+            <div>
+                <span class="fw-bold d-block" style="font-size: 0.85rem;">Gagal</span>
+                <span style="font-size: 0.8rem; opacity: 0.9;">{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
     <div class="col-xl-10 mx-auto" id="ordersGrid">
 
         @forelse ($orders as $order)
@@ -161,7 +171,7 @@
                                     <i class="bi bi-info-circle"></i>
                                 </button>
                             @elseif($order->status === 'Pending Denda')
-                                <a href="{{ route('customer.rental.denda', $order->id) }}"
+                                <a href="{{ route('customer.orders.payment', $order->id) }}"
                                     class="btn btn-danger btn-md rounded-pill text-white fw-bold px-4 border-0 shadow-sm animate__animated animate__pulse animate__infinite">
                                     <i class="bi bi-wallet2 me-1"></i> Bayar Denda
                                 </a>
@@ -180,6 +190,16 @@
                                     onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
+                            @elseif($order->status === 'Selesai')
+                                <a href="{{ route('customer.rental.download-struk', $order->id) }}"
+                                    class="btn btn-outline-success btn-md rounded-pill px-4 fw-bold">
+                                    <i class="bi bi-download me-1"></i> Struk Akhir
+                                </a>
+
+                                <button type="button" class="btn btn-outline-secondary btn-md rounded-pill px-3"
+                                    onclick="window.tampilkanDetailBooking({{ json_encode($order->load('motor', 'perlengkapan')) }})">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
                             @elseif($order->status === 'failed' || $order->status === 'Gagal')
                                 <div class="d-flex flex-column align-items-center align-items-md-end gap-2">
                                     <span class="text-danger mb-1 d-block" style="font-size: 0.75rem; opacity: 0.85;">
@@ -189,13 +209,13 @@
                                     <div class="d-flex gap-2">
                                         @if ($order->motor_id)
                                             <a href="{{ route('catalog.show', $order->motor_id) }}"
-                                                class="btn btn-danger btn-md rounded-pill text-white px-4 border-0 shadow-sm transition-all fw-bold"
+                                                class="btn btn-danger btn-sm rounded-pill text-white px-4 border-0 shadow-sm transition-all fw-bold"
                                                 style="font-size: 0.85rem;">
-                                                <i class="bi bi-arrow-counterclockwise me-1"></i> Sewa Ulang Unit Ini
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i> Sewa Ulang
                                             </a>
                                         @else
                                             <a href="{{ url('/catalog') }}"
-                                                class="btn btn-secondary btn-md rounded-pill text-white px-4 border-0 shadow-sm"
+                                                class="btn btn-secondary btn-sm rounded-pill text-white px-4 border-0 shadow-sm"
                                                 style="font-size: 0.85rem;">
                                                 <i class="bi bi-search me-1"></i> Cari Motor Lain
                                             </a>
@@ -209,6 +229,11 @@
                                     </div>
                                 </div>
                             @endif
+
+                            <button type="button" class="btn btn-outline-danger btn-md rounded-pill px-3"
+                                data-bs-toggle="modal" data-bs-target="#modalHapusOrder{{ $order->id }}">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
 
                         </div>
                     </div>
@@ -232,8 +257,9 @@
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content rounded-4 border-0 shadow text-start">
                             <div class="modal-header bg-dark text-white p-3">
-                                <h5 class="modal-title fw-bold fs-6"><i
-                                        class="bi bi-box-arrow-in-left me-2"></i>Konfirmasi Pengembalian</h5>
+                                <h5 class="modal-title fw-bold fs-6">
+                                    <i class="bi bi-box-arrow-in-left me-2"></i>Konfirmasi Pengembalian
+                                </h5>
                                 <button type="button" class="btn-close btn-close-white"
                                     data-bs-dismiss="modal"></button>
                             </div>
@@ -249,8 +275,8 @@
                                             <div>
                                                 <span class="fw-bold text-dark d-block mb-1">Layanan Antar-Jemput
                                                     Aktif</span>
-                                                Staf kami akan menjemput motor ke lokasi Anda. Silakan tentukan opsi
-                                                kehadiran Anda di bawah ini.
+                                                Staf kami akan menjemput motor ke lokasi Anda, atau Anda dapat
+                                                menitipkannya secara aman di cabang resmi kami jika sedang terburu-buru.
                                             </div>
                                         </div>
 
@@ -261,31 +287,37 @@
                                                 onchange="toggleSkenarioKembali(this, '{{ $order->id }}')">
                                                 <option value="menunggu">🤝 Serah Terima Langsung (Saya akan menunggu
                                                     staf di lokasi)</option>
-                                                <option value="titip">⚡ Contactless / Buru-buru (Motor akan saya
-                                                    titipkan / parkir)</option>
+                                                <option value="titip_cabang">🏪 Titip di Cabang Terdekat (Darurat /
+                                                    Buru-buru)</option>
                                             </select>
                                         </div>
 
                                         <div id="formContactless{{ $order->id }}"
                                             class="d-none border rounded-3 p-3 bg-light mb-3">
                                             <div class="mb-3">
-                                                <label class="form-label small fw-bold text-dark">Di Kita Kunci & STNK
-                                                    Ditinggalkan?</label>
-                                                <input type="text" class="form-control rounded-3"
-                                                    name="posisi_kunci"
-                                                    placeholder="Contoh: Dititip ke Resepsionis Hotel / Di dalam dasbor motor">
+                                                <label class="form-label small fw-bold text-dark">Pilih Cabang Resmi
+                                                    Tujuan</label>
+                                                <select class="form-select rounded-3" name="cabang_kembali_id">
+                                                    <option value="">-- Pilih Lokasi Cabang KudaBesiRent --
+                                                    </option>
+                                                    <option value="1">KudaBesiRent - Cabang Bandara (Drop Zone 1)
+                                                    </option>
+                                                    <option value="2">KudaBesiRent - Cabang Stasiun (Drop Zone 2)
+                                                    </option>
+                                                </select>
                                             </div>
                                             <div class="mb-0">
-                                                <label class="form-label small fw-bold text-dark">Foto Posisi Kendaraan
-                                                    Parkir</label>
+                                                <label class="form-label small fw-bold text-dark">Foto Serah Terima
+                                                    dengan Staf Cabang</label>
                                                 <input type="file" class="form-control rounded-3"
-                                                    name="foto_bukti" accept="image/*">
-                                                <small class="text-muted d-block mt-1">Unggah foto parkir unit untuk
-                                                    mempercepat staf kami mengidentifikasi lokasi.</small>
+                                                    name="foto_serah_terima_cabang" accept="image/*">
+                                                <small class="text-muted d-block mt-1">Wajib mengunggah foto serah
+                                                    terima kunci bersama petugas cabang sebagai bukti digital
+                                                    resmi.</small>
                                             </div>
                                         </div>
 
-                                        <div class="mb-0">
+                                        <div class="mb-0" id="wrapperAlamatJemput{{ $order->id }}">
                                             <label class="form-label fw-bold small text-dark">Konfirmasi / Perubahan
                                                 Alamat Jemput</label>
                                             <textarea class="form-control rounded-3" name="alamat_jemput_final" rows="2"
@@ -315,6 +347,37 @@
                     </div>
                 </div>
             @endif
+
+            <div class="modal fade" id="modalHapusOrder{{ $order->id }}" tabindex="-1" aria-hidden="true"
+                style="white-space: normal;">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content rounded-4 border-0 shadow text-start">
+                        <div class="modal-header border-0 pt-3 pe-3 pb-0">
+                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center px-4 pb-4 pt-0">
+                            <i class="bi bi-trash3 text-danger display-5 mb-3 d-inline-block"></i>
+                            <h5 class="fw-bold text-carbon mb-2">Hapus Pesanan?</h5>
+                            <p class="text-muted small mb-4">Apakah Anda yakin ingin menghapus data booking <strong
+                                    class="text-dark">{{ $order->kode_booking }}</strong> dari riwayat?</p>
+
+                            <form action="{{ route('customer.orders.destroy', $order->id) }}" method="POST">
+                                @csrf
+                                @method('DELETE')
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-danger rounded-pill py-2 fw-bold small">Ya,
+                                        Hapus Permanen</button>
+                                    <button type="button"
+                                        class="btn btn-light border rounded-pill py-2 text-secondary small"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalHapusOrder{{ $order->id }}">Batal</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endforeach
 
         <div class="d-flex justify-content-center custom-pagination mt-5">
@@ -322,21 +385,21 @@
         </div>
     </div>
 
-
-
 </main>
 
 <x-modal-orderList />
 
-
-
 <script>
     function toggleSkenarioKembali(selectElement, orderId) {
-        const formContactless = document.getElementById('formContactless' + orderId);
-        if (selectElement.value === 'titip') {
+        var formContactless = document.getElementById('formContactless' + orderId);
+        var wrapperAlamatJemput = document.getElementById('wrapperAlamatJemput' + orderId);
+
+        if (selectElement.value === 'titip_cabang') {
             formContactless.classList.remove('d-none');
+            if (wrapperAlamatJemput) wrapperAlamatJemput.classList.add('d-none');
         } else {
             formContactless.classList.add('d-none');
+            if (wrapperAlamatJemput) wrapperAlamatJemput.classList.remove('d-none');
         }
     }
 </script>

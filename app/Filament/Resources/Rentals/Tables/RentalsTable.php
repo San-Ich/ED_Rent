@@ -75,6 +75,22 @@ class RentalsTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('cabang_kembali_id')
+                    ->label('Lokasi Cabang Kembali')
+                    ->badge()
+                    ->color('warning')
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        1 => '📍 Cabang Bandara',
+                        2 => '📍 Cabang Stasiun',
+                        default => 'Garasi Pusat / Menunggu Jemput',
+                    })
+                    ->sortable(),
+                ImageColumn::make('foto_serah_terima_cabang')
+                    ->label('Bukti Serah Terima')
+                    ->disk('public')
+                    ->url(fn($record) => $record->foto_serah_terima_cabang ? asset('storage/' . $record->foto_serah_terima_cabang) : null)
+                    ->openUrlInNewTab()
+                    ->size(50),
             ])
             ->filters([
                 //

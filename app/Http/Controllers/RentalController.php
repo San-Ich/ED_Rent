@@ -9,6 +9,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -141,168 +142,232 @@ class RentalController extends Controller
 
     public function paymentPage($id)
     {
-        $rental = Rental::with(['motor', 'user'])->where('user_id', Auth::id())->findOrFail($id);
+    
+        $rental = Rental::with(['motor', 'user', 'perlengkapan'])->where('user_id', Auth::id())->findOrFail($id);
+        $waktuSekarang = Carbon::now('Asia/Jakarta');
 
-        if ($rental->status !== 'Menunggu' && $rental->status !== 'waiting') {
-            return redirect()->route('customer.orders')->with('error', 'Transaksi ini tidak membutuhkan pembayaran.');
+
+        $isDenda = ($rental->status === 'Pending Denda');
+
+        if (!$isDenda) {
+            if ($rental->status !== 'Menunggu' && $rental->status !== 'waiting') {
+                return redirect()->route('customer.orders')->with('error', 'Transaksi ini tidak membutuhkan pembayaran.');
+            }
+
+            $isMotorTaken = Rental::where('motor_id', $rental->motor_id)
+                ->where('status', 'Disewa')
+                ->where(function ($query) use ($rental) {
+                    $query->whereBetween('tanggal_mulai', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
+                        ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
+                        ->orWhere(function ($q) use ($rental) {
+                            $q->where('tanggal_mulai', '<=', $rental->tanggal_mulai)
+                                ->where('tanggal_rencana_kembali', '>=', $rental->tanggal_rencana_kembali);
+                        });
+                })->exists();
+
+            if ($isMotorTaken) {
+                $rental->update(['status' => 'Gagal']);
+                return redirect()->route('payment.failed', $rental->id)
+                    ->with('error', 'Maaf, unit motor ini baru saja didahului oleh penyewa lain yang membayar lebih cepat!');
+            }
         }
 
-        $isMotorTaken = Rental::where('motor_id', $rental->motor_id)
-            ->where('status', 'Disewa')
-            ->where(function ($query) use ($rental) {
-                $query->whereBetween('tanggal_mulai', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
-                    ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
-                    ->orWhere(function ($q) use ($rental) {
-                        $q->where('tanggal_mulai', '<=', $rental->tanggal_mulai)
-                            ->where('tanggal_rencana_kembali', '>=', $rental->tanggal_rencana_kembali);
-                    });
-            })
-            ->exists();
+        \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        \Midtrans\Config::$isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
+        \Midtrans\Config::$isSanitized = true;
+        \Midtrans\Config::$is3ds = true;
 
-        if ($isMotorTaken) {
-            $rental->update(['status' => 'Gagal']);
+        $duration = 15;
+        $unit = 'minute';
 
-            return redirect()->route('payment.failed', $rental->id)
-                ->with('error', 'Maaf, unit motor ini baru saja didahului oleh penyewa lain yang membayar lebih cepat!');
-        }
+        if ($isDenda) {
+            $waktuRencanaKembali = Carbon::parse($rental->tanggal_rencana_kembali, 'Asia/Jakarta')->startOfDay();
+            $selisihHari = $waktuRencanaKembali->diffInDays($waktuSekarang->copy()->startOfDay(), false);
+            $hariTerlambat = $selisihHari > 0 ? $selisihHari : 1;
 
-        $waktuSekarang = Carbon::now();
+            $dendaPerHari = 50000;
+            $penaltyNominal = $dendaPerHari * $hariTerlambat;
 
-        if ($rental->snap_token && $rental->payment_expired_at && $waktuSekarang->lessThan($rental->payment_expired_at)) {
-            $snapToken = $rental->snap_token;
-        } else {
-            \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-            \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION') === 'true';
-            \Midtrans\Config::$isSanitized = true;
-            \Midtrans\Config::$is3ds = true;
+            if ($penaltyNominal <= 0) {
+                return redirect()->route('customer.orders')->with('error', 'Transaksi ini tidak memiliki nominal denda valid.');
+            }
 
-            $duration = 1;
-            $unit = 'minute';
+            if ($rental->denda_snap_token && $rental->denda_expired_at && $waktuSekarang->lessThan($rental->denda_expired_at)) {
+                $snapToken = $rental->denda_snap_token;
+            } else {
+            
+                $orderIdDenda = 'DENDA-' . $rental->kode_booking;
 
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $rental->kode_booking . '-' . time(),
-                    'gross_amount' => (int) $rental->total_harga,
-                ],
-                'customer_details' => [
-                    'first_name' => $rental->user->name,
-                    'email' => $rental->user->email,
-                    'phone' => $rental->user->phone ?? '', // Tambahan opsional pelengkap data customer
-                ],
-                'item_details' => [
-                    [
-                        'id' => $rental->motor_id,
-                        'price' => (int) $rental->total_harga,
-                        'quantity' => 1,
-                        'name' => 'Sewa ' . $rental->motor->brand . ' ' . $rental->motor->model,
+                $params = [
+                    'transaction_details' => [
+                        'order_id' => $orderIdDenda,
+                        'gross_amount' => (int) $penaltyNominal,
+                    ],
+                    'customer_details' => [
+                        'first_name' => $rental->user->name,
+                        'email' => $rental->user->email,
+                        'phone' => $rental->user->phone ?? '',
+                    ],
+                    'item_details' => [
+                        [
+                            'id' => 'PENALTY-' . $rental->id,
+                            'price' => (int) $penaltyNominal,
+                            'quantity' => 1,
+                            'name' => 'Denda Keterlambatan ' . $rental->motor->brand . ' ' . $rental->motor->model,
+                        ]
+                    ],
+                    'expiry' => [
+                        'start_time' => date("Y-m-d H:i:s O"),
+                        'duration' => $duration,
+                        'unit' => $unit
                     ]
-                ],
-                'expiry' => [
-                    'start_time' => date("Y-m-d H:i:s O"),
-                    'duration' => $duration,
-                    'unit' => $unit
-                ],
-                // 🌟 KUNCI UTAMA FIX: Memaksa server Midtrans mengirim user balik ke web Anda saat Expired
-                'callbacks' => [
-                    'finish' => route('payment.success', $rental->id),
-                    'unfinish' => route('customer.orders'),
-                    'error' => route('payment.failed', $rental->id) // Menghancurkan 'example.com' selamanya
-                ]
-            ];
+                ];
 
-            $snapToken = \Midtrans\Snap::getSnapToken($params);
+                $snapToken = \Midtrans\Snap::getSnapToken($params);
 
-            $rental->snap_token = $snapToken;
-            $rental->payment_expired_at = \Carbon\Carbon::now()->addMinute($duration);
-            $rental->save();
+                $rental->denda_snap_token = $snapToken;
+                $rental->denda_expired_at = Carbon::now()->addMinutes($duration);
+                $rental->save();
+            }
+        } else {
+            $penaltyNominal = 0;
+
+            if ($rental->snap_token && $rental->payment_expired_at && $waktuSekarang->lessThan($rental->payment_expired_at)) {
+                $snapToken = $rental->snap_token;
+            } else {
+                $params = [
+                    'transaction_details' => [
+                        'order_id' => $rental->kode_booking,
+                        'gross_amount' => (int) $rental->total_harga,
+                    ],
+                    'customer_details' => [
+                        'first_name' => $rental->user->name,
+                        'email' => $rental->user->email,
+                        'phone' => $rental->user->phone ?? '',
+                    ],
+                    'item_details' => [
+                        [
+                            'id' => $rental->motor_id,
+                            'price' => (int) $rental->total_harga,
+                            'quantity' => 1,
+                            'name' => 'Sewa ' . $rental->motor->brand . ' ' . $rental->motor->model,
+                        ]
+                    ],
+                    'expiry' => [
+                        'start_time' => date("Y-m-d H:i:s O"),
+                        'duration' => $duration,
+                        'unit' => $unit
+                    ],
+                    'callbacks' => [
+                        'finish' => route('payment.success', $rental->id),
+                        'unfinish' => route('customer.orders'),
+                        'error' => route('payment.failed', $rental->id)
+                    ]
+                ];
+
+                $snapToken = \Midtrans\Snap::getSnapToken($params);
+
+                $rental->snap_token = $snapToken;
+                $rental->payment_expired_at = Carbon::now()->addMinutes($duration);
+                $rental->save();
+            }
         }
 
-        return view('payment', compact('rental', 'snapToken'));
+        return view('payment', [
+            'rental'    => $rental,
+            'id'        => $rental->id,
+            'order'     => $rental,
+            'penalty'   => $penaltyNominal,
+            'snapToken' => $snapToken,
+            'isDenda'   => $isDenda
+        ]);
     }
 
     public function midtransWebhook(Request $request)
     {
         $payload = $request->all();
 
-        $orderId = $payload['order_id'];
-        $statusCode = $payload['status_code'];
-        $grossAmount = $payload['gross_amount'];
+        $orderId           = $payload['order_id'];
+        $statusCode        = $payload['status_code'];
+        $grossAmount       = $payload['gross_amount'];
         $transactionStatus = $payload['transaction_status'];
-        $type = $payload['payment_type'];
-        $signatureKey = $payload['signature_key'];
+        $signatureKey      = $payload['signature_key'];
 
-        $serverKey = env('MIDTRANS_SERVER_KEY');
+        $serverKey      = env('MIDTRANS_SERVER_KEY');
         $localSignature = hash("sha512", $orderId . $statusCode . $grossAmount . $serverKey);
-
-        $statusMurni = strtolower($transactionStatus);
-
-        Log::info('Midtrans Webhook Masuk. Order ID: ' . $orderId . ' | Status Asli: ' . $transactionStatus . ' | Status Murni: ' . $statusMurni . ' | Amount: ' . $grossAmount);
 
         if ($signatureKey !== $localSignature) {
             Log::error('Webhook Gagal: Invalid Signature untuk Order ID ' . $orderId);
             return response()->json(['message' => 'Invalid Signature'], 403);
         }
 
-        $isDendaPayment = str_starts_with($orderId, 'DENDA-');
+        $statusMurni = strtolower($transactionStatus);
 
-        if ($isDendaPayment) {
-            $cleanOrderId = str_replace('DENDA-', '', $orderId);
-            $actualOrderId = substr($cleanOrderId, 0, strrpos($cleanOrderId, '-'));
-        } else {
-            $actualOrderId = substr($orderId, 0, strrpos($orderId, '-'));
-        }
+        // Log::info("========================================");
+        // Log::info("HASIL DD PAYLOAD MIDTRANS:", $payload);
+        // Log::info("APAKAH DENDA? : " . (str_starts_with($orderId, 'DENDA-') ? 'YA' : 'TIDAK'));
+        // Log::info("KODE BOOKING HASIL POTONG: " . str_replace(['DENDA-', '-RETRY'], '', $orderId));
+        // Log::info("========================================");
+        // Log::info("Midtrans Webhook Masuk. Order ID: {$orderId} | Status: {$statusMurni}");
+
+        $isDendaPayment = str_starts_with($orderId, 'DENDA-');
+        $actualOrderId  = str_replace(['DENDA-', '-RETRY'], '', $orderId);
 
         $rental = Rental::where('kode_booking', $actualOrderId)->first();
 
+        if (!$rental) {
+            Log::error('Webhook Gagal: Data Rental tidak ditemukan untuk Kode Booking: ' . $actualOrderId);
+            return response()->json(['message' => 'Data rental tidak ditemukan'], 404);
+        }
 
         if ($statusMurni == 'capture' || $statusMurni == 'settlement') {
 
             if ($isDendaPayment) {
-                Rental::where('id', $rental->id)->update([
-                    'status'  => 'Selesai',
-                    'penalty' => (int) $grossAmount
+
+                $nominalDenda   = (int) $grossAmount;
+                $totalHargaBaru = (int) $rental->total_harga + $nominalDenda;
+
+                DB::table('rentals')->where('id', $rental->id)->update([
+                    'status'      => 'Menunggu Verifikasi',
+                    'penalty'     => $nominalDenda,
+                    'total_harga' => $totalHargaBaru,
                 ]);
 
                 if ($rental->motor_id) {
-                    Motor::where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
+                    DB::table('motors')->where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
                 }
-                Log::info('Denda Berhasil Diupdate ke Database untuk Booking: ' . $actualOrderId);
+
+                Log::info('Webhook Berhasil: Denda Lunas. Status Rental: Menunggu Verifikasi. ID: ' . $actualOrderId);
             } else {
-                $rental->update(['status' => 'Disewa']);
+
+                DB::table('rentals')->where('id', $rental->id)->update(['status' => 'Disewa']);
 
                 if ($rental->motor_id) {
-                    Motor::where('id', $rental->motor_id)->update(['status' => 'Disewa']);
+                    DB::table('motors')->where('id', $rental->motor_id)->update(['status' => 'Disewa']);
                 }
+
+                Log::info('Webhook Berhasil: Sewa Utama Active [Disewa] untuk ID: ' . $actualOrderId);
             }
         } elseif ($statusMurni == 'pending') {
 
-            if (!$isDendaPayment) {
-                $rental->update(['status' => 'Menunggu']);
+            if (!$isDendaPayment && !in_array($rental->status, ['Disewa', 'Menunggu Verifikasi'])) {
+                DB::table('rentals')->where('id', $rental->id)->update(['status' => 'Menunggu']);
             }
         } elseif (in_array($statusMurni, ['deny', 'expire', 'cancel'])) {
 
             if ($isDendaPayment) {
-                Rental::where('id', $rental->id)->update([
-                    'status' => 'Pending Denda',
-                    'snap_token' => null,
-                    'payment_expired_at' => null
-                ]);
+                DB::table('rentals')->where('id', $rental->id)->update(['status' => 'Pending Denda']);
             } else {
-                $rental->update([
-                    'status' => 'Gagal',
-                    'snap_token' => null,
-                    'payment_expired_at' => null
-                ]);
-
+                DB::table('rentals')->where('id', $rental->id)->update(['status' => 'Gagal']);
                 if ($rental->motor_id) {
-                    Motor::where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
+                    DB::table('motors')->where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
                 }
             }
-        }
+        } 
 
         return response()->json([
-            'status' => 'Selesai',
-            'message' => 'Status database KudaBesiRent berhasil diperbarui!'
+            'status' => 'Success',
+            'message' => 'Database KudaBesiRent berhasil diperbarui!'
         ], 200);
     }
 
@@ -321,11 +386,29 @@ class RentalController extends Controller
         return $pdf->download('Struk-' . $rental->kode_booking . '.pdf');
     }
 
-    public function KonfirmasiMotor($id)
-
+    public function KonfirmasiMotor(Request $request, $id)
     {
+        
         $rental = Rental::with('motor')->findOrFail($id);
 
+        if ($request->opsi_kehadiran === 'titip_cabang') {
+            $request->validate([
+                'cabang_kembali_id' => 'required',
+                'foto_serah_terima_cabang' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            ], [
+                'cabang_kembali_id.required' => 'Anda wajib memilih cabang tempat menitipkan motor.',
+                'foto_serah_terima_cabang.required' => 'Bukti foto serah terima kunci wajib diunggah.',
+            ]);
+
+            if ($request->hasFile('foto_serah_terima_cabang')) {
+                $path = $request->file('foto_serah_terima_cabang')->store('bukti_cabang', 'public');
+                $rental->foto_serah_terima_cabang = $path;
+            }
+
+            $rental->cabang_kembali_id = $request->cabang_kembali_id;
+        }
+
+    
         $waktuSekarang = Carbon::now('Asia/Jakarta')->startOfDay();
         $waktuRencanaKembali = Carbon::parse($rental->tanggal_rencana_kembali, 'Asia/Jakarta')->startOfDay();
 
@@ -333,7 +416,6 @@ class RentalController extends Controller
         $selisihHari = 0;
 
         if ($waktuSekarang->gt($waktuRencanaKembali)) {
-
             $selisihHari = $waktuRencanaKembali->diffInDays($waktuSekarang);
 
             if ($selisihHari > 0) {
@@ -343,77 +425,17 @@ class RentalController extends Controller
         }
 
         if ($biayaPenalti > 0) {
-            $rental->update([
-                'penalty' => $biayaPenalti,
-                'status' => 'Pending Denda',
-            ]);
+            $rental->penalty = $biayaPenalti;
+            $rental->status = 'Pending Denda';
+            $rental->save();
 
             return redirect()->back()->with('success', 'Terlambat ' . $selisihHari . ' hari. Silakan bayar denda terlebih dahulu.');
         } else {
-            $rental->update([
-                'status' => 'Menunggu Verifikasi',
-            ]);
+            $rental->status = 'Menunggu Verifikasi';
+            $rental->save();
 
             return redirect()->back()->with('success', 'Pengembalian berhasil, menunggu konfirmasi admin.');
         }
-    }
-
-    public function PembayaranDenda($id)
-    {
-        $rental = Rental::with('motor')->findOrFail($id);
-
-        $waktuSekarang = Carbon::now('Asia/Jakarta')->startOfDay();
-        $waktuRencanaKembali = Carbon::parse($rental->tanggal_rencana_kembali, 'Asia/Jakarta')->startOfDay();
-
-        $penaltyNominal = 0;
-
-        $selisihHari = $waktuRencanaKembali->diffInDays($waktuSekarang, false);
-
-        if ($rental->status === 'Pending Denda') {
-            $hariTerlambat = $selisihHari > 0 ? $selisihHari : 1;
-
-            $dendaPerHari = 50000;
-            $penaltyNominal = $dendaPerHari * $hariTerlambat;
-        }
-
-        if ($rental->status !== 'Pending Denda' || $penaltyNominal <= 0) {
-            return redirect()->route('customer.orders')->with('error', 'Transaksi ini tidak memiliki denda.');
-        }
-
-        \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        \Midtrans\Config::$isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
-        \Midtrans\Config::$isSanitized = true;
-        \Midtrans\Config::$is3ds = true;
-
-        $params = [
-            'transaction_details' => [
-                'order_id' => 'DENDA-' . $rental->kode_booking . '-' . time(),
-                'gross_amount' => (int) $penaltyNominal,
-            ],
-            'customer_details' => [
-                'first_name' => Auth::user()->name,
-                'email' => Auth::user()->email,
-            ],
-            'item_details' => [
-                [
-                    'id' => 'PENALTY-' . $rental->id,
-                    'price' => (int) $penaltyNominal,
-                    'quantity' => 1,
-                    'name' => 'Denda Keterlambatan Sewa ' . $rental->motor->model,
-                ]
-            ]
-        ];
-
-        $snapToken = \Midtrans\Snap::getSnapToken($params);
-
-        return view('payment', [
-            'rental'    => $rental,
-            'id'        => $rental->id,
-            'order'     => $rental,
-            'penalty'   => $penaltyNominal,
-            'snapToken' => $snapToken,
-            'isDenda'   => true
-        ]);
     }
 
     public function payCash(Rental $rental)
@@ -446,45 +468,98 @@ class RentalController extends Controller
         return redirect()->route('customer.orders')->with('success', 'Metode Pembayaran Cash berhasil dipilih! Silakan datang ke garasi sesuai waktu ambil.');
     }
 
-    public function paymentSuccess($id)
+    public function paymentSuccess(Request $request, $id)
     {
         $rental = Rental::where('user_id', Auth::id())->findOrFail($id);
 
-        $rental->update(['status' => 'Disewa']);
+        $isDenda = $request->query('type') === 'denda';
+        $grossAmount = $request->query('gross_amount');
 
-        Rental::where('motor_id', $rental->motor_id)
-            ->where('status', 'Menunggu')
-            ->where('id', '!=', $rental->id)
-            ->where(function ($query) use ($rental) {
-                $query->whereBetween('tanggal_mulai', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
-                    ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali]);
-            })
-            ->update(['status' => 'Gagal']); //
+        if ($isDenda) {
+
+            if ($rental->penalty == 0 && $grossAmount) {
+                $nominalDenda = (int) $grossAmount;
+
+                $rental->status = 'Menunggu Verifikasi';
+                $rental->penalty = $nominalDenda;
+                $rental->total_harga = (int) $rental->total_harga + $nominalDenda;
+            }
+        } else {
+
+            $rental->update(['status' => 'Disewa']);
+
+            Rental::where('motor_id', $rental->motor_id)
+                ->where('status', 'Menunggu')
+                ->where('id', '!=', $rental->id)
+                ->where(function ($query) use ($rental) {
+                    $query->whereBetween('tanggal_mulai', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali])
+                        ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali]);
+                })
+                ->update(['status' => 'Gagal']);
+        }
 
         return view('payment-success', compact('rental'));
     }
 
-    public function paymentFailed($id)
+    public function paymentFailed(Request $request, $id)
     {
         $rental = Rental::where('user_id', Auth::id())->findOrFail($id);
 
-        return view('payment-failed', compact('rental'));
+        $isDenda = $request->query('type') === 'denda';
+
+        return view('payment-failed', compact('rental', 'isDenda'));
     }
 
     public function handleDirectFailed()
     {
-        // Cari transaksi terakhir milik user yang sedang login yang statusnya belum selesai/gagal
         $latestRental = Rental::where('user_id', Auth::id())
             ->latest()
             ->first();
 
         if ($latestRental) {
-            // Jika ketemu, lempar (redirect) ke halaman paymentFailed yang asli dengan membawa ID-nya
             return redirect()->route('payment.failed', $latestRental->id);
         }
 
-        // Jika tidak ada data transaksi sama sekali, lempar ke dashboard / riwayat pesanan utama
         return redirect()->route('customer.orders.index')
             ->with('error', 'Waktu pembayaran online Anda telah habis.');
+    }
+
+    public function checkFonnteStatus()
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => env('FONNTE_TOKEN'),
+            ])->post('https://api.fonnte.com/device');
+
+            $result = $response->json();
+
+            if ($response->successful() && isset($result['status']) && $result['status'] === true) {
+                if (isset($result['device']['status']) && $result['device']['status'] === 'connected') {
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function destroy($id)
+    {
+        $order = Rental::findOrFail($id);
+
+        $authUserId = Auth::id();
+        if ($order->user_id !== $authUserId) {
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk menghapus pesanan ini.');
+        }
+
+        if (in_array($order->status, ['Disewa', 'active', 'Pending Denda'])) {
+            return redirect()->back()->with('error', 'Pesanan yang sedang berjalan atau memiliki denda tidak dapat dihapus.');
+        }
+
+        $order->delete();
+
+        return redirect()->back()->with('success', 'Riwayat pesanan berhasil dihapus.');
     }
 }
