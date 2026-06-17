@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->string('brand');
             $table->string('model');
+            $table->string('slug')->unique()->nullable();
             $table->string('plate_nomor')->unique();
             $table->integer('harga_per_hari');
             $table->enum('status', ['Tersedia','Perawatan', 'Disewa'])->default('Tersedia');

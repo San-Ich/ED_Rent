@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MotorController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RentalController;
 use Illuminate\Support\Facades\Auth;
@@ -36,12 +37,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-orders', [RentalController::class, 'index'])->name('customer.orders');
     Route::get('/rental/{id}/download-struk', [RentalController::class, 'downloadStruk'])->name('customer.rental.download-struk');
     Route::post('/rental/{id}/Konfirmasi-Motor', [RentalController::class, 'KonfirmasiMotor'])->name('customer.rental.kembalikan');
-    Route::get('/orders/{id}/payment', [RentalController::class, 'paymentPage'])->name('customer.orders.payment');
-    Route::post('/rental/{rental}/pay-cash', [RentalController::class, 'payCash'])->name('customer.rental.pay-cash');
+    Route::get('/orders/{id}/payment', [PaymentController::class, 'paymentPage'])->name('customer.orders.payment');
+    Route::post('/rental/{rental}/pay-cash', [PaymentController::class, 'payCash'])->name('customer.rental.pay-cash');
     Route::delete('/customer/orders/{id}', [RentalController::class, 'destroy'])->name('customer.orders.destroy');
 
-    Route::get('/payment/success/{id}', [RentalController::class, 'paymentSuccess'])->name('payment.success');
-    Route::get('/payment/failed/{id}', [RentalController::class, 'paymentFailed'])->name('payment.failed');
+    Route::get('/payment/success/{id}', [PaymentController::class, 'paymentSuccess'])->name('payment.success');
+    Route::get('/payment/failed/{id}', [PaymentController::class, 'paymentFailed'])->name('payment.failed');
     Route::match(['get', 'post'], '/payment-failed-direct', [RentalController::class, 'handleDirectFailed'])->name('payment.failed.direct');
 
 
