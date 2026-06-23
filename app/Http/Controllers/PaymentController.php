@@ -14,10 +14,8 @@ class PaymentController extends Controller
 {
     public function paymentPage($id)
     {
-
         $rental = Rental::with(['motor', 'user', 'perlengkapan'])->where('user_id', Auth::id())->findOrFail($id);
         $waktuSekarang = Carbon::now('Asia/Jakarta');
-
 
         $isDenda = ($rental->status === 'Pending Denda');
 
@@ -54,8 +52,16 @@ class PaymentController extends Controller
 
         if ($isDenda) {
             $waktuRencanaKembali = Carbon::parse($rental->tanggal_rencana_kembali, 'Asia/Jakarta')->startOfDay();
-            $selisihHari = $waktuRencanaKembali->diffInDays($waktuSekarang->copy()->startOfDay(), false);
-            $hariTerlambat = $selisihHari > 0 ? $selisihHari : 1;
+            $waktuSekarangSaja = $waktuSekarang->copy()->setTimezone('Asia/Jakarta')->startOfDay();
+
+            $hariTerlambat = 0;
+            if ($waktuSekarangSaja->greaterThan($waktuRencanaKembali)) {
+                $hariTerlambat = $waktuRencanaKembali->diffInDays($waktuSekarangSaja);
+            }
+
+            if ($hariTerlambat <= 0) {
+                $hariTerlambat = 1;
+            }
 
             $dendaPerHari = 50000;
             $penaltyNominal = $dendaPerHari * $hariTerlambat;
@@ -64,43 +70,49 @@ class PaymentController extends Controller
                 return redirect()->route('customer.orders')->with('error', 'Transaksi ini tidak memiliki nominal denda valid.');
             }
 
-            if ($rental->denda_snap_token && $rental->denda_expired_at && $waktuSekarang->lessThan($rental->denda_expired_at)) {
-                $snapToken = $rental->denda_snap_token;
-            } else {
+            $orderIdDenda = 'DENDA-' . $rental->kode_booking . '-' . time();
 
-                $orderIdDenda = 'DENDA-' . $rental->kode_booking;
-
-                $params = [
-                    'transaction_details' => [
-                        'order_id' => $orderIdDenda,
-                        'gross_amount' => (int) $penaltyNominal,
-                    ],
-                    'customer_details' => [
-                        'first_name' => $rental->user->name,
-                        'email' => $rental->user->email,
-                        'phone' => $rental->user->phone ?? '',
-                    ],
-                    'item_details' => [
-                        [
-                            'id' => 'PENALTY-' . $rental->id,
-                            'price' => (int) $penaltyNominal,
-                            'quantity' => 1,
-                            'name' => 'Denda Keterlambatan ' . $rental->motor->brand . ' ' . $rental->motor->model,
-                        ]
-                    ],
-                    'expiry' => [
-                        'start_time' => date("Y-m-d H:i:s O"),
-                        'duration' => $duration,
-                        'unit' => $unit
+            $params = [
+                'transaction_details' => [
+                    'order_id' => $orderIdDenda,
+                    'gross_amount' => (int) $penaltyNominal,
+                ],
+                'customer_details' => [
+                    'first_name' => $rental->user->name,
+                    'email' => $rental->user->email,
+                    'phone' => $rental->user->phone ?? '',
+                ],
+                'item_details' => [
+                    [
+                        'id' => 'PENALTY-' . $rental->id,
+                        'price' => (int) $penaltyNominal,
+                        'quantity' => 1,
+                        'name' => 'Denda Terlambat ' . $hariTerlambat . ' Hari - ' . $rental->motor->brand,
                     ]
-                ];
+                ],
+                'expiry' => [
+                    'start_time' => date("Y-m-d H:i:s O"),
+                    'duration' => $duration,
+                    'unit' => $unit
+                ],
+                'callbacks' => [
+                    'finish' => route('payment.success', $rental->id) . '?type=denda&gross_amount=' . $penaltyNominal,
+                    'unfinish' => route('customer.orders'),
+                    'error' => route('payment.failed', $rental->id)
+                ]
+            ];
 
-                $snapToken = \Midtrans\Snap::getSnapToken($params);
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
 
-                $rental->denda_snap_token = $snapToken;
-                $rental->denda_expired_at = Carbon::now()->addMinutes($duration);
-                $rental->save();
-            }
+            $rental->denda_snap_token = $snapToken;
+            $rental->penalty = $penaltyNominal;
+            $rental->denda_expired_at = Carbon::now()->addMinutes($duration);
+
+            DB::table('rentals')->where('id', $rental->id)->update([
+                'denda_snap_token' => $snapToken,
+                'penalty' => $penaltyNominal,
+                'denda_expired_at' => Carbon::now()->addMinutes($duration)
+            ]);
         } else {
             $penaltyNominal = 0;
 
@@ -131,7 +143,7 @@ class PaymentController extends Controller
                         'unit' => $unit
                     ],
                     'callbacks' => [
-                        'finish' => route('payment.success', $rental->id),
+                        'finish' => route('payment.success', $rental->id) . '?type=sewa&gross_amount=' . $rental->total_harga,
                         'unfinish' => route('customer.orders'),
                         'error' => route('payment.failed', $rental->id)
                     ]
@@ -175,17 +187,10 @@ class PaymentController extends Controller
 
         $statusMurni = strtolower($transactionStatus);
 
-        // Log::info("========================================");
-        // Log::info("HASIL DD PAYLOAD MIDTRANS:", $payload);
-        // Log::info("APAKAH DENDA? : " . (str_starts_with($orderId, 'DENDA-') ? 'YA' : 'TIDAK'));
-        // Log::info("KODE BOOKING HASIL POTONG: " . str_replace(['DENDA-', '-RETRY'], '', $orderId));
-        // Log::info("========================================");
-        // Log::info("Midtrans Webhook Masuk. Order ID: {$orderId} | Status: {$statusMurni}");
-
         $isDendaPayment = str_starts_with($orderId, 'DENDA-');
         $actualOrderId  = str_replace(['DENDA-', '-RETRY'], '', $orderId);
 
-        $rental = Rental::where('kode_booking', $actualOrderId)->first();
+        $rental = Rental::with(['motor', 'perlengkapan'])->where('kode_booking', $actualOrderId)->first();
 
         if (!$rental) {
             Log::error('Webhook Gagal: Data Rental tidak ditemukan untuk Kode Booking: ' . $actualOrderId);
@@ -195,21 +200,37 @@ class PaymentController extends Controller
         if ($statusMurni == 'capture' || $statusMurni == 'settlement') {
 
             if ($isDendaPayment) {
+                $nominalDenda = (int) $grossAmount;
 
-                $nominalDenda   = (int) $grossAmount;
-                $totalHargaBaru = (int) $rental->total_harga + $nominalDenda;
+                $start = \Carbon\Carbon::parse($rental->tanggal_mulai);
+                $rencana = \Carbon\Carbon::parse($rental->tanggal_rencana_kembali);
+                $durasiSewa = $start->diffInDays($rencana) ?: 1;
+
+                $biayaSewaAsli = $durasiSewa * $rental->motor->harga_per_hari;
+
+                $biayaPerlengkapan = 0;
+                if ($rental->perlengkapan && $rental->perlengkapan->count() > 0) {
+                    foreach ($rental->perlengkapan as $item) {
+                        $hargaItem = $item->harga_per_hari ?? $item->harga ?? 0;
+                        $qty = $item->pivot->jumlah ?? 1;
+                        $biayaPerlengkapan += ($hargaItem * $qty);
+                    }
+                }
+                $totalBiayaPerlengkapan = $biayaPerlengkapan * $durasiSewa;
+
+                $totalHargaPas = $biayaSewaAsli + $totalBiayaPerlengkapan + $nominalDenda;
 
                 DB::table('rentals')->where('id', $rental->id)->update([
                     'status'      => 'Menunggu Verifikasi',
                     'penalty'     => $nominalDenda,
-                    'total_harga' => $totalHargaBaru,
+                    'total_harga' => $totalHargaPas,
                 ]);
 
                 if ($rental->motor_id) {
                     DB::table('motors')->where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
                 }
 
-                Log::info('Webhook Berhasil: Denda Lunas. Status Rental: Menunggu Verifikasi. ID: ' . $actualOrderId);
+                Log::info('Webhook Berhasil: Mengunci total harga denda mutlak.');
             } else {
 
                 DB::table('rentals')->where('id', $rental->id)->update(['status' => 'Disewa']);
@@ -281,17 +302,49 @@ class PaymentController extends Controller
         $grossAmount = $request->query('gross_amount');
 
         if ($isDenda) {
-
-            if ($rental->penalty == 0 && $grossAmount) {
-                $nominalDenda = (int) $grossAmount;
-
-                $rental->status = 'Menunggu Verifikasi';
-                $rental->penalty = $nominalDenda;
-                $rental->total_harga = (int) $rental->total_harga + $nominalDenda;
+            if (!$rental->relationLoaded('perlengkapan')) {
+                $rental->load('perlengkapan');
             }
-        } else {
 
-            $rental->update(['status' => 'Disewa']);
+            $start = \Carbon\Carbon::parse($rental->tanggal_mulai);
+            $rencana = \Carbon\Carbon::parse($rental->tanggal_rencana_kembali);
+            $durasiSewa = $start->diffInDays($rencana) ?: 1;
+
+            $biayaSewaAsli = $durasiSewa * $rental->motor->harga_per_hari;
+
+            $biayaPerlengkapan = 0;
+            if ($rental->perlengkapan && $rental->perlengkapan->count() > 0) {
+                foreach ($rental->perlengkapan as $item) {
+                    $hargaItem = $item->harga_per_hari ?? $item->harga ?? 0;
+                    $qty = $item->pivot->jumlah ?? 1;
+                    $biayaPerlengkapan += ($hargaItem * $qty);
+                }
+            }
+            $totalBiayaPerlengkapan = $biayaPerlengkapan * $durasiSewa;
+
+            $nominalDenda = $grossAmount ? (int)$grossAmount : (int)$rental->penalty;
+
+            $totalHargaPas = $biayaSewaAsli + $totalBiayaPerlengkapan + $nominalDenda;
+
+            DB::table('rentals')->where('id', $rental->id)->update([
+                'status'      => 'Menunggu Verifikasi',
+                'penalty'     => $nominalDenda,
+                'total_harga' => $totalHargaPas,
+            ]);
+
+            if ($rental->motor_id) {
+                DB::table('motors')->where('id', $rental->motor_id)->update(['status' => 'Tersedia']);
+            }
+
+            $rental = Rental::with(['motor', 'user', 'perlengkapan'])->findOrFail($id);
+        } else {
+            DB::table('rentals')->where('id', $rental->id)->update([
+                'status' => 'Disewa'
+            ]);
+
+            if ($rental->motor_id) {
+                DB::table('motors')->where('id', $rental->motor_id)->update(['status' => 'Disewa']);
+            }
 
             Rental::where('motor_id', $rental->motor_id)
                 ->where('status', 'Menunggu')
@@ -301,6 +354,8 @@ class PaymentController extends Controller
                         ->orWhereBetween('tanggal_rencana_kembali', [$rental->tanggal_mulai, $rental->tanggal_rencana_kembali]);
                 })
                 ->update(['status' => 'Gagal']);
+
+            $rental = $rental->refresh();
         }
 
         return view('payment-success', compact('rental'));

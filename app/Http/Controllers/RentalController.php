@@ -87,7 +87,7 @@ class RentalController extends Controller
 
         if (!empty($request->input('perlengkapan_ids'))) {
             foreach ($request->input('perlengkapan_ids') as $idPerlengkapan) {
-                $perlengkapan = \App\Models\Perlengkapan::find($idPerlengkapan);
+                $perlengkapan = Perlengkapan::find($idPerlengkapan);
 
                 if ($perlengkapan && $perlengkapan->stok <= 0) {
                     return redirect()->back()->with('error', "Maaf, perlengkapan '{$perlengkapan->nama_perlengkapan}' baru saja kehabisan stok!");
@@ -107,10 +107,23 @@ class RentalController extends Controller
 
         $tglMulai   = Carbon::parse($request->tanggal_mulai)->format('Y-m-d H:i:s');
         $tglKembali = Carbon::parse($request->tanggal_rencana_kembali)->format('Y-m-d H:i:s');
-
         $kodeBooking = 'KBB-' . date('Ymd') . '-' . strtoupper(Str::random(5));
 
-        $hargaFinalYangDisimpan = $request->total_harga;
+        $start = Carbon::parse($request->tanggal_mulai);
+        $rencana = Carbon::parse($request->tanggal_rencana_kembali);
+        $durasiSewa = $start->diffInDays($rencana) ?: 1;
+
+        $biayaMotor = $durasiSewa * $motor->harga_per_hari;
+        $biayaPerlengkapan = 0;
+
+        $perlengkapanDipilih = $request->input('perlengkapan_ids', []);
+
+        if (!empty($perlengkapanDipilih)) {
+            $hargaPerHariPerlengkapan = Perlengkapan::whereIn('id', $perlengkapanDipilih)->sum('harga_per_hari');
+            $biayaPerlengkapan = $hargaPerHariPerlengkapan * $durasiSewa;
+        }
+
+        $hargaFinalYangDisimpan = $biayaMotor + $biayaPerlengkapan;
 
         $rental = Rental::create([
             'user_id'                 => Auth::id(),
@@ -125,8 +138,6 @@ class RentalController extends Controller
             'metode_pengantaran'      => $request->metode_pengantaran,
             'alamat_pengantaran'      => $request->metode_pengantaran === 'delivery' ? $request->alamat_pengantaran_final : null,
         ]);
-
-        $perlengkapanDipilih = $request->input('perlengkapan_ids');
 
         if (!empty($perlengkapanDipilih)) {
             $rental->perlengkapan()->attach($perlengkapanDipilih);

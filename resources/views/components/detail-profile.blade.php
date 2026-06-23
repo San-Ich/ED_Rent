@@ -127,7 +127,7 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 rounded-start-3 text-muted"><i
                                         class="bi bi-whatsapp"></i></span>
-                                <input type="text" name="phone"
+                                <input type="number" name="phone"
                                     class="form-control border-start-0 rounded-end-3 py-2 @error('phone') is-invalid @enderror"
                                     value="{{ old('phone', $user->phone) }}" placeholder="Contoh: 08123456789" required>
                             </div>

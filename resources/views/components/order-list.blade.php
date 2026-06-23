@@ -125,8 +125,9 @@
                             </div>
                             <div class="col-12 col-sm-4 text-sm-end">
                                 <span class="text-secondary">Total:</span>
-                                <span class="text-carbon fw-bold fs-6">Rp
-                                    {{ number_format($order->total_harga, 0, ',', '.') }}</span>
+                                <span class="text-carbon fw-bold fs-6">
+                                    Rp {{ number_format($order->total_harga, 0, ',', '.') }}
+                                </span>
                             </div>
                         </div>
                     </div>

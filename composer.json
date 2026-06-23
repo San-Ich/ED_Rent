@@ -9,7 +9,10 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
+        "ext-intl": "*",
+        "ext-zip": "*",
+        "ext-gd": "*",
         "barryvdh/laravel-dompdf": "^3.1",
         "filament/filament": "^5.6",
         "flowframe/laravel-trend": "^0.5.0",

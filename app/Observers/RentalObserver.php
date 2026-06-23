@@ -6,6 +6,7 @@ use App\Filament\Resources\Rentals\Schemas\RentalForm;
 use App\Models\Rental;
 use Carbon\Carbon;
 use Filament\Schemas\Components\Form;
+use Illuminate\Support\Facades\DB;
 
 class RentalObserver
 {
@@ -70,7 +71,11 @@ class RentalObserver
 
     public function saving(Rental $rental): void
     {
-        if ($rental->status === 'Menunggu Verifikasi' || $rental->status === 'Selesai') {
+        if (in_array($rental->status, ['Pending Denda', 'Selesai', 'Menunggu Verifikasi'])) {
+            return;
+        }
+
+        if (!$rental->exists) {
             return;
         }
 
@@ -84,22 +89,36 @@ class RentalObserver
             $biayaSewa = $durasiSewa * $motor->harga_per_hari;
 
             $hargaPerlengkapan = 0;
-            if ($rental->relationLoaded('perlengkapan') || isset($rental->perlengkapan)) {
-                $hargaPerlengkapan = $rental->perlengkapan->sum('harga_per_hari') * $durasiSewa;
+            $perlengkapanData = $rental->perlengkapan;
+
+            if (($perlengkapanData === null || $perlengkapanData->isEmpty()) && $rental->id) {
+                $perlengkapanData = $rental->perlengkapan()->get();
             }
+
+            if ($perlengkapanData && $perlengkapanData->count() > 0) {
+                foreach ($perlengkapanData as $item) {
+                    $hargaItem = $item->harga_per_hari ?? $item->harga ?? 0;
+                    $qty = $item->pivot->jumlah ?? 1;
+                    $hargaPerlengkapan += ($hargaItem * $qty);
+                }
+            }
+            $totalBiayaPerlengkapan = $hargaPerlengkapan * $durasiSewa;
 
             $penalty = 0;
             if ($rental->tanggal_pengembalian) {
                 $aktual = Carbon::parse($rental->tanggal_pengembalian);
+
                 if ($aktual->greaterThan($rencana)) {
-                    $hariTerlambat = $rencana->diffInDays($aktual);
-                    $penalty = $hariTerlambat * 50000;
+                    $hariTerlambat = $rencana->startOfDay()->diffInDays($aktual->startOfDay());
+
+                    if ($hariTerlambat > 0) {
+                        $penalty = $hariTerlambat * 50000;
+                    }
                 }
             }
 
             $rental->penalty = $penalty;
-
-            $rental->total_harga = $biayaSewa + $hargaPerlengkapan + $penalty;
+            $rental->total_harga = $biayaSewa + $totalBiayaPerlengkapan + $penalty;
         }
     }
 }
